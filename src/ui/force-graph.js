@@ -14,7 +14,7 @@ export function createForceGraph(canvas, { onSelect, onOpen, colorOf = () => '#5
   let showLabels = true;
   let search = '';
   let focus = null; // { id, depth }
-  const settings = { repel: 900, linkDist: 70, linkStrength: 0.06, gravity: 0.012 };
+  const settings = { repel: 1700, linkDist: 85, linkStrength: 0.05, gravity: 0.01 };
 
   function resize() {
     dpr = Math.min(2, window.devicePixelRatio || 1);

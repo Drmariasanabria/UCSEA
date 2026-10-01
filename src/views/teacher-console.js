@@ -520,8 +520,10 @@ export default async function render(root, { path, user }) {
   }
 
   // ----- EXPORT
+  let trackCache = [];
   function drawExport() {
-    const data = () => ({ lab: st.lab, crew: st.crew, comms: st.comms, events: st.events });
+    api.getTrack?.(labId).then((t) => { trackCache = t || []; }).catch(() => {});
+    const data = () => ({ lab: st.lab, crew: st.crew, comms: st.comms, events: st.events, track: trackCache });
     mount(body, h('div.col',
       h('div.panel', h('h4', icon('log'), 'Caja negra (VDR) de la sesión completa'),
         h('div.row', EXPORT_FORMATS.map((f) => h('button.btn', { onclick: () => exportSession(f.id, data()) }, icon(f.icon), f.label))),
@@ -581,8 +583,23 @@ export default async function render(root, { path, user }) {
     }),
   ];
   const tick = setInterval(() => { drawSession(); drawPulse(); }, 5000);
+  // Voyage-data-recorder track for the debrief replay (every 15 s while running).
+  const recordTrack = () => {
+    const lab = st.lab;
+    if (!lab || lab.status !== 'running') return;
+    const t = Date.now();
+    const pic = picture(lab, t);
+    api.addTrack(labId, {
+      t,
+      own: { x: pic.own.px, y: pic.own.py, course: lab.ownShip.course, speed: lab.ownShip.speed, list: lab.ownShip.list || 0 },
+      targets: pic.contacts.map((c) => ({ id: c.id, name: c.name, type: c.type, x: c.px, y: c.py, course: c.course, speed: c.speed, ais: c.ais, tow: !!c.tow })),
+      world: lab.world,
+    }).catch(() => {});
+  };
+  const vdr = setInterval(recordTrack, 15000);
+  setTimeout(recordTrack, 1500);
 
   drawSession(); drawRoster(); drawPulse(); drawTabs(); drawBody(); drawRight();
 
-  return () => { unsubs.forEach((u) => u()); clearInterval(tick); director.stop(); radar?.destroy(); session.destroy(); stopAllAlarms(); void startAlarm; void npcName; void CHANNELS; };
+  return () => { unsubs.forEach((u) => u()); clearInterval(tick); clearInterval(vdr); director.stop(); radar?.destroy(); session.destroy(); stopAllAlarms(); void startAlarm; void npcName; void CHANNELS; };
 }

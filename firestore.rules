@@ -53,6 +53,10 @@ service cloud.firestore {
           (signedIn() && onlyChanges(['analysis', 'replied', 'aiStatus']));
         allow delete: if isTeacher();
       }
+      match /track/{id} {
+        allow read: if signedIn();
+        allow write: if isTeacher();
+      }
       match /events/{id} {
         allow read: if signedIn();
         allow create: if signedIn();

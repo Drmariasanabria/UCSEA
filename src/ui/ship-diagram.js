@@ -96,7 +96,7 @@ export function shipDiagram({ onPick, marks = [], interactive = true } = {}) {
       const x = z.x + z.w * (m.dx ?? 0.5);
       const y = m.side === 'port' ? PLAN_TOP + 42 : m.side === 'starboard' ? PLAN_MID + 36 : DECK_Y + 30;
       el('circle', { cx: x, cy: y, r: 13, fill: m.color || 'rgba(255,93,108,0.75)', stroke: '#fff', 'stroke-width': 2 }, markLayer);
-      if (m.label) txt(x, y - 18, m.label, 12, '#fff');
+      if (m.label) txt(x, m.dx != null ? y + 28 : y - 18, m.label, 12, '#fff');
     }
   }
   setMarks(marks);

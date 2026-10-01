@@ -178,6 +178,14 @@ export function createLocalBackend() {
     async getEvents(labId) { return read(`events:${labId}`, []); },
     async getCrew(labId) { return Object.values(read(`crew:${labId}`, {})); },
 
+    async addTrack(labId, sample) {
+      const key = `track:${labId}`;
+      const list = read(key, []);
+      list.push(sample);
+      write(key, list.slice(-1200));
+    },
+    async getTrack(labId) { return read(`track:${labId}`, []); },
+
     // ---------- glossary ----------
     watchGlossary(cb) { return listen('glossary', () => cb(Object.values(col('glossary')))); },
     async saveTerm(term) {

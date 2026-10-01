@@ -181,6 +181,9 @@ export async function createFirebaseBackend() {
     },
     async getEvents(labId) { return (await getDocs(query(collection(db, 'labs', labId, 'events'), orderBy('ts')))).docs.map((d) => d.data()); },
 
+    async addTrack(labId, sample) { await setDoc(doc(db, 'labs', labId, 'track', String(sample.t)), sample); },
+    async getTrack(labId) { return (await getDocs(query(collection(db, 'labs', labId, 'track'), orderBy('t')))).docs.map((d) => d.data()); },
+
     // ---------- glossary ----------
     watchGlossary(cb) {
       let seeded = false;

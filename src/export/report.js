@@ -144,7 +144,7 @@ export function exportSession(format, data) {
     return download(base + '.csv', '﻿' + rows.map((r) => r.map(csvEscape).join(',')).join('\n'), 'text/csv;charset=utf-8');
   }
   if (format === 'json') {
-    return download(base + '.json', JSON.stringify({ format: 'mesim-vdr', version: 1, exportedAt: new Date().toISOString(), lab: data.lab, crew: data.crew, events: data.events, comms: data.comms }, null, 2), 'application/json');
+    return download(base + '.json', JSON.stringify({ format: 'mesim-vdr', version: 1, exportedAt: new Date().toISOString(), lab: data.lab, crew: data.crew, events: data.events, comms: data.comms, track: data.track || [] }, null, 2), 'application/json');
   }
   throw new Error('Unknown format ' + format);
 }

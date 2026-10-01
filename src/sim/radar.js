@@ -13,6 +13,7 @@ export function createRadar(canvas, opts = {}) {
     onMoveTarget: null, // teacher god mode: drag targets
     godMode: false,
     sweepSound: false,
+    getTime: null, // replay clock
     ...opts,
   };
   const ctx = canvas.getContext('2d');
@@ -59,7 +60,7 @@ export function createRadar(canvas, opts = {}) {
     const toScreen = (x, y) => {
       const dx = x - centre.x;
       const dy = y - centre.y;
-      const a = toRad(rot);
+      const a = toRad(-rot); // rotate the world so own heading points up
       const rx = dx * Math.cos(a) - dy * Math.sin(a);
       const ry = dx * Math.sin(a) + dy * Math.cos(a);
       return { sx: S / 2 + rx * k, sy: S / 2 - ry * k };
@@ -67,7 +68,7 @@ export function createRadar(canvas, opts = {}) {
     const fromScreen = (sx, sy) => {
       const rx = (sx - S / 2) / k;
       const ry = -(sy - S / 2) / k;
-      const a = toRad(-rot);
+      const a = toRad(rot);
       return { x: centre.x + rx * Math.cos(a) - ry * Math.sin(a), y: centre.y + rx * Math.sin(a) + ry * Math.cos(a) };
     };
     return { pic, S, R, k, rot, toScreen, fromScreen, centre };
@@ -87,7 +88,7 @@ export function createRadar(canvas, opts = {}) {
     sweep = (sweep + dt * 150) % 360; // 2.4 s per revolution
     if (o.sweepSound && sweep < lastPingAngle) sfx.ping();
     lastPingAngle = sweep;
-    const t = Date.now();
+    const t = o.getTime ? o.getTime() : Date.now();
     const S = sizeCss();
     ctx.clearRect(0, 0, S, S);
     if (!lab || !lab.ownShip) { drawIdle(S); raf = requestAnimationFrame(draw); return; }
@@ -287,7 +288,7 @@ export function createRadar(canvas, opts = {}) {
     const rect = canvas.getBoundingClientRect();
     const mx = ev.clientX - rect.left;
     const my = ev.clientY - rect.top;
-    const f = frame(lab, Date.now());
+    const f = frame(lab, o.getTime ? o.getTime() : Date.now());
     let best = null;
     let bd = 16;
     for (const c of f.pic.contacts) {
