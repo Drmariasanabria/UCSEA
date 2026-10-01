@@ -8,7 +8,7 @@ Proyecto de innovación docente. Funciona como web estática (GitHub Pages) con 
 | Módulo | Para qué sirve |
 |---|---|
 | **Real Communication Lab** (núcleo) | Sesión en directo con código de embarque. Cada estudiante elige **titulación** (Náutica, Marina, Marítima, Gestión) y **puesto** (30 roles: OOW, Capitán, Jefe de máquinas, ETO, VTS, MRCC, práctico, consignatario, ingeniero naval, inspector PSC…). Cada puesto tiene su consola: radar ARPA (CPA/TCPA, EBL/VRM, blancos sin AIS), gobierno y telégrafo, cámara de máquinas con alarmas, plano del buque, imagen VTS/MRCC, documentación de oficina. Radio VHF multicanal con **PTT por voz** (reconocimiento en-GB), marcadores SMCP, frases, diario de navegación y **análisis lingüístico en vivo** antes de transmitir. |
-| **Alarmas y eventos** | 27 eventos (aproximación excesiva, niebla, remolque sin AIS, apagón, incendio, hombre al agua, vía de agua, corrimiento de carga, derrame en bunkering, piratería, PSC…) con alarma sonora propia y **tareas específicas para cada rol**. El docente los dispara, programa en cronograma o activa **eventos aleatorios**; el alumnado también puede notificar eventos. |
+| **Alarmas y eventos** | 29 eventos (aproximación excesiva, niebla, remolque sin AIS, apagón, incendio, hombre al agua, vía de agua, corrimiento de carga, derrame en bunkering, piratería, PSC…) con alarma sonora propia y **tareas específicas para cada rol**. El docente los dispara, programa en cronograma o activa **eventos aleatorios**; el alumnado también puede notificar eventos. |
 | **Consola docente** | Roster con estado y progreso, feed en directo con filtros, **hablar como cualquier estación**, radar maestro (arrastrar/añadir/editar buques, AIS on/off), meteorología, visibilidad, mar, GNSS, planta, **variables del ejercicio**, instrucciones y **estructuras obligatorias** (24 detectables), IA (automática / borrador + aprobación / manual), mensajes privados, **ver como estudiante**, rúbrica alineada con MCER / STCW, exportaciones. |
 | **Estaciones con IA que siempre responden** | Cadena: Claude (Cloud Function opcional) → Gemini (Firebase AI Logic) → **motor SMCP local** (detección de intención, extracción de datos, verificación de colación, datos reales del radar y de los eventos). Sin claves en el navegador. |
 | **Debriefing / caja negra (VDR)** | Reproducción de la sesión (radar + comunicaciones + alarmas) con línea de tiempo, momentos clave, **tiempos de reacción** por persona y alarma, mapa de estructuras usadas, resumen por participante. |
@@ -17,6 +17,17 @@ Proyecto de innovación docente. Funciona como web estática (GitHub Pages) con 
 | **Glosario colaborativo** | Lista, tarjetas y **grafo dinámico tipo Obsidian** (zoom, arrastre, grafo local, enlaces implícitos). Importa JSON/CSV/notas `.md`/bóvedas `.zip`; exporta JSON, CSV, Markdown, **bóveda de Obsidian** y Anki. 120 términos semilla del material de clase. |
 | **Misiones ITM II** | 5 misiones de ~15 min tipo simulador: *Fog at the Pilot Station*, *Bunker Watch*, *Dark Tow in the Lane*, *List to Starboard*, *Call the Place* (escucha con interferencias, radio con reparación, decisiones con tiempo, radar, *claim court*, cronologías, localización en el plano…). |
 | **Investigación** | Cuestionario PRE/POST con consentimiento, analíticas de clase y exportaciones **seudonimizadas** (CSV) para evaluar el impacto del proyecto. |
+
+## Funciones avanzadas del Lab (innovación docente)
+
+- **Índice de seguridad del buque**: puntuación de equipo (0–100) visible para toda la tripulación; baja si las alarmas no se reconocen o nadie responde por radio a tiempo, y sube con la calidad del procedimiento SMCP. Convierte la comunicación en responsabilidad compartida.
+- **Relevo de guardia**: un clic rota a cada estudiante al siguiente puesto de su titulación y lanza el evento de relevo con briefing obligatorio (posición, tráfico, incidencias, órdenes): todos viven varias perspectivas profesionales.
+- **Historias encadenadas**: secuencias reproducibles (escalada en niebla, noche oscura en el DST, cascada técnica, día de puerto, temporal) para que todos los grupos afronten lo mismo en el mismo minuto: comparabilidad para investigación.
+- **Modo proyector** (`#/bridge/<id>`): radar grande, radio en directo, alarmas, tripulación e índice de seguridad para la pantalla del aula.
+- **Evaluación entre iguales**: al terminar, cada estudiante valora a un compañero (claridad, procedimiento, precisión + comentario); llega de forma anónima y queda en el informe.
+- **Fluidez oral**: palabras por minuto y confianza del reconocimiento de voz en cada transmisión por PTT.
+- **Glosario en contexto**: los términos del glosario colaborativo se resaltan en los mensajes con su traducción.
+- **Mensajes privados del docente, vista de estudiante, rúbrica, tiempos de reacción y caja negra reproducible**.
 
 ## Probarlo ya (sin configurar nada)
 
@@ -46,7 +57,7 @@ Si Firebase no responde, la app pasa automáticamente al modo demo y avisa.
 
 ## Pruebas
 
-`npm test` — 18 pruebas de la lógica (analizador, motor de diálogo, cinemática y CPA, eventos y tareas por rol, misiones, parser de localizaciones, glosario, ZIP).
+`npm test` — 21 pruebas de la lógica (analizador, motor de diálogo, cinemática y CPA, eventos y tareas por rol, misiones, parser de localizaciones, glosario, ZIP).
 
 ## Notas de honestidad pedagógica
 

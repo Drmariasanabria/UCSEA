@@ -75,7 +75,8 @@ service cloud.firestore {
 
     match /portfolios/{uid}/entries/{id} {
       allow read: if signedIn() && (me() == uid || isTeacher() || resource.data.shared == true);
-      allow create, delete: if signedIn() && me() == uid;
+      allow create: if signedIn() && (me() == uid || isTeacher());
+      allow delete: if signedIn() && me() == uid;
       allow update: if signedIn() && (me() == uid || (isTeacher() && onlyChanges(['teacherComment', 'teacherScore'])));
     }
 

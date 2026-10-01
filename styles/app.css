@@ -469,3 +469,6 @@ abbr.gloss:hover { background: rgba(95,240,208,0.12); }
 .wall { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; height: calc(100vh - 28px); padding: 14px; }
 .wall .ticker .msg .text { font-size: 1.25rem; }
 .wall h1 { font-size: 2.4rem; margin: 0; }
+
+.hotspot.small:hover circle, .hotspot.small.on circle { stroke-width: .7; }
+.hotspot.small.on circle { fill: rgba(255,207,90,.25); }

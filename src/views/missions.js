@@ -297,7 +297,7 @@ const RENDERERS = {
     const markers = [];
     for (const s of p.spots) {
       const g = document.createElementNS(NS, 'g');
-      g.setAttribute('class', 'hotspot');
+      g.setAttribute('class', 'hotspot small');
       g.innerHTML = `<circle cx="${s.x}" cy="${s.y * 0.6}" r="3.2" fill="rgba(57,208,255,.12)" stroke="rgba(57,208,255,.6)" stroke-width=".4"/>`;
       g.addEventListener('click', () => {
         if (found.has(s.id)) { found.delete(s.id); g.classList.remove('on'); } else { found.add(s.id); g.classList.add('on'); sfx.tick(); }
