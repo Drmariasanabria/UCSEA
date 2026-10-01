@@ -7,7 +7,7 @@ import { norm360, toRad, toDeg, uid, seeded, clamp } from '../core/util.js';
 export const HOUR = 3600 * 1000;
 
 export function posAt(obj, t = Date.now()) {
-  const dtH = Math.max(0, (t - (obj.setAt || t)) / HOUR) * (obj.timeScale || 1);
+  const dtH = Math.max(0, (t - (obj.setAt ?? t)) / HOUR) * (obj.timeScale || 1);
   const spd = obj.speed || 0;
   const c = toRad(obj.course || 0);
   return { x: (obj.x || 0) + Math.sin(c) * spd * dtH, y: (obj.y || 0) + Math.cos(c) * spd * dtH };
@@ -208,7 +208,7 @@ export function picture(lab, t = Date.now()) {
 export function shipClock(lab, t = Date.now()) {
   const base = String(lab.world?.clock || '1200');
   const startMin = parseInt(base.slice(0, 2), 10) * 60 + parseInt(base.slice(2), 10);
-  const elapsed = Math.floor((t - (lab.simStart || t)) / 60000);
+  const elapsed = Math.floor((t - (lab.simStart ?? t)) / 60000);
   const m = (startMin + elapsed) % 1440;
   return String(Math.floor(m / 60)).padStart(2, '0') + String(m % 60).padStart(2, '0');
 }

@@ -117,7 +117,10 @@ export function describe(zone, side) {
  * Returns { zone, side, confidence, reasons[] }.
  */
 export function parseLocation(text = '') {
-  const t = text.toLowerCase().replace(/number|nº|n°/g, 'no.').replace(/no\s*\.?\s*(\d)/g, 'no.$1');
+  const WORDNUM = { one: 1, two: 2, three: 3, four: 4, five: 5, first: 1, second: 2, third: 3, fourth: 4 };
+  const t = text.toLowerCase()
+    .replace(/\b(one|two|three|four|five|first|second|third|fourth)\b/g, (w) => String(WORDNUM[w]))
+    .replace(/number|nº|n°/g, 'no.').replace(/no\s*\.?\s*(\d)/g, 'no.$1');
   const reasons = [];
   let side = /\bport\b/.test(t) ? 'port' : /\bstarboard\b|\bstbd\b/.test(t) ? 'starboard' : null;
   if (/\bcentreline|centerline|amidships\b/.test(t)) side = null;
