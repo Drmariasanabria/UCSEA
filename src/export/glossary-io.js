@@ -34,7 +34,7 @@ export function toMarkdown(terms, byId = new Map(terms.map((t) => [t.id, t]))) {
 }
 
 function noteFor(t, byId) {
-  const fm = ['---', `term: "${t.term.replace(/"/g, '\\"')}"`, `es: "${(t.es || '').replace(/"/g, '\\"')}"`, `category: ${t.category || 'language'}`, `tags: [${[t.category, ...(t.tags || [])].filter(Boolean).map((x) => slugify(x)).join(', ')}]`, `author: "${(t.author || '').replace(/"/g, '\\"')}"`, `id: ${t.id}`, '---', ''];
+  const fm = ['---', `term: "${t.term.replace(/"/g, '\\"')}"`, `es: "${(t.es || '').replace(/"/g, '\\"')}"`, `category: ${t.category || 'language'}`, `tags: [${[...new Set([t.category, ...(t.tags || [])].filter(Boolean).map((x) => slugify(x)))].join(', ')}]`, `author: "${(t.author || '').replace(/"/g, '\\"')}"`, `id: ${t.id}`, '---', ''];
   const body = [`# ${t.term}`, '', t.es ? `**ES:** ${t.es}` : '', '', t.def || '', '', t.example ? `> ${t.example}` : '', '',
     t.related?.length ? '## Related' : '', ...(t.related || []).map((r) => `- [[${fileName(byId.get(r)?.term || r)}]]`)];
   return fm.join('\n') + body.filter((x, i, a) => !(x === '' && a[i - 1] === '')).join('\n') + '\n';

@@ -42,7 +42,7 @@ export function shipDiagram({ onPick, marks = [], interactive = true } = {}) {
   // plan view
   el('path', { d: `M40 ${PLAN_TOP + 20} L880 ${PLAN_TOP} Q975 ${PLAN_MID} 880 ${PLAN_BOT} L40 ${PLAN_BOT - 20} Z`, fill: '#0c2a44', stroke: '#5ad1ff', 'stroke-width': 2 });
   el('line', { x1: 40, y1: PLAN_MID, x2: 960, y2: PLAN_MID, stroke: 'rgba(255,207,90,0.5)', 'stroke-dasharray': '8 6' });
-  const txt = (x, y, s, size = 13, fill = '#cfeaff', anchor = 'middle') => { const t = el('text', { x, y, 'font-size': size, fill, 'text-anchor': anchor, 'font-family': 'JetBrains Mono, monospace' }); t.textContent = s; return t; };
+  const txt = (x, y, s, size = 13, fill = '#cfeaff', anchor = 'middle') => { const t = el('text', { x, y, 'font-size': size, fill, 'text-anchor': anchor, 'font-family': 'JetBrains Mono, monospace', 'pointer-events': 'none' }); t.textContent = s; return t; };
   txt(500, PLAN_MID + 4, 'CENTRELINE', 11, 'rgba(255,207,90,0.8)');
   txt(30, PLAN_TOP + 8, 'PORT', 12, '#ff8a8a', 'start');
   txt(30, PLAN_BOT + 12, 'STARBOARD', 12, '#7cf29c', 'start');
