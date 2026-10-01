@@ -60,7 +60,10 @@ export function createLocalBackend() {
   }
 
   const authSubs = new Set();
-  const currentUser = () => read('session', null);
+  // The signed-in user is per tab (sessionStorage) so one browser can host a teacher tab and student tabs.
+  const SKEY = NS + 'session';
+  const currentUser = () => { try { return JSON.parse(sessionStorage.getItem(SKEY) || 'null'); } catch { return null; } };
+  const setSession = (p) => { if (p) sessionStorage.setItem(SKEY, JSON.stringify(p)); else sessionStorage.removeItem(SKEY); };
 
   const api = {
     mode: 'demo',
@@ -79,18 +82,18 @@ export function createLocalBackend() {
         profile = { uid: uid('u_'), name: name.trim(), email: email || '', role, createdAt: Date.now(), careerId: null, roleId: null };
         putDoc('profiles', profile.uid, profile);
       }
-      write('session', profile);
+      setSession(profile);
       authSubs.forEach((fn) => fn(profile));
       return profile;
     },
     async signOut() {
-      localStorage.removeItem(NS + 'session');
+      setSession(null);
       authSubs.forEach((fn) => fn(null));
     },
     async getProfile(id) { return col('profiles')[id] || null; },
     async updateProfile(id, patch) {
       const p = patchDoc('profiles', id, patch);
-      if (currentUser()?.uid === id) { write('session', p); authSubs.forEach((fn) => fn(p)); }
+      if (currentUser()?.uid === id) { setSession(p); authSubs.forEach((fn) => fn(p)); }
       return p;
     },
     async listProfiles(filter = {}) {

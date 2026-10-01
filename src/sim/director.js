@@ -30,12 +30,12 @@ export function eventVars(lab, def, vars = {}) {
  * Fire an event (catalogue id or custom definition) into a live lab.
  * by: { uid, name, role } of who triggered it (teacher, student, director).
  */
-export async function fireEvent(lab, { eventId, custom, vars = {}, by = {}, silentBroadcast = false }) {
+export async function fireEvent(lab, { eventId, custom, vars = {}, by = {}, silentBroadcast = false, applyFx = true }) {
   const api = db();
   const def = custom || eventById(eventId);
   if (!def) throw new Error('Unknown event ' + eventId);
   const v = eventVars(lab, def, vars);
-  const { patch, notes } = applyEffects(lab, def.effects, v);
+  const { patch, notes } = applyFx ? applyEffects(lab, def.effects, v) : { patch: {}, notes: [] };
   if (Object.keys(patch).length) await api.updateLab(lab.id, patch);
   const ev = await api.addEvent(lab.id, {
     eventId: custom ? null : def.id,
@@ -49,6 +49,7 @@ export async function fireEvent(lab, { eventId, custom, vars = {}, by = {}, sile
     vars: v,
     by: { uid: by.uid || 'director', name: by.name || 'Director', role: by.role || 'system' },
     status: 'active',
+    effectsApplied: applyFx,
   });
   await api.sendComm(lab.id, {
     kind: 'system', channel: 'SYS', from: 'SYSTEM', fromUid: 'system',
