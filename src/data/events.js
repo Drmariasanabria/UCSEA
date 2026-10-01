@@ -405,6 +405,22 @@ export const EVENTS = [
     generic: 'Translate "Beaufort 8" into a full sentence with wind direction and force.',
   },
 
+  {
+    id: 'watch_handover', category: 'navigation', severity: 'routine', alarm: null, icon: 'users',
+    es: 'Relevo de guardia (rotación de puestos)', en: 'Watch handover',
+    vars: {},
+    situation: 'Watch handover: every crew member takes over a new post. The outgoing watch must brief the incoming watch before leaving.',
+    effects: {},
+    tasks: [
+      { who: 'bridgeTeam', task: 'Hand over the navigational watch in four sentences: position, course and speed; traffic (with CPA); active incidents; Master\'s standing orders. The incoming officer reads back the key data.', include: ['position', 'traffic', 'incidents', 'orders'] },
+      { who: 'engineTeam', task: 'Hand over the engine-room watch: machinery running, abnormal readings with values and units, work in progress, alarms acknowledged.', include: ['readings', 'units'] },
+      { who: 'shoreAuthority', task: 'Hand over the shore watch: vessels being monitored, open incidents, pending calls and the next scheduled broadcast.', include: ['vessels', 'incidents'] },
+      { who: 'company', task: 'Pass on the case file: what the ship reported, what you asked, what is still pending and the deadline.', include: ['pending', 'deadline'] },
+      { who: 'port', task: 'Hand over the port desk: ships expected, berth windows, documents pending and agreed times.', include: ['times'] },
+    ],
+    generic: 'Introduce yourself in your new post and confirm what you have taken over (I have taken over …).',
+  },
+
   // ───────────────────────── PORT / AGENCY / INSPECTION ─────────────────────────
   {
     id: 'pilot_change', category: 'port', severity: 'routine', alarm: null, icon: 'anchor',

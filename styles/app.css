@@ -454,3 +454,18 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   #ocean, .scanlines, .topbar, .toast-host { display: none !important; }
   body { background: #fff; color: #000; }
 }
+
+/* glossary terms inside messages */
+abbr.gloss { text-decoration: none; border-bottom: 1px dotted var(--accent-2); cursor: help; }
+abbr.gloss:hover { background: rgba(95,240,208,0.12); }
+/* safety index */
+.safety-ring { --v: 80; --c: var(--c-safety); width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--c) calc(var(--v) * 1%), rgba(255,255,255,0.08) 0); position: relative; flex: none; }
+.safety-ring::before { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: var(--panel-solid); }
+.safety-ring b { position: relative; font: 800 1.15rem var(--mono); color: var(--text); }
+.safety-ring.xl { width: 180px; height: 180px; }
+.safety-ring.xl::before { inset: 14px; }
+.safety-ring.xl b { font-size: 3rem; }
+/* projector wall */
+.wall { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; height: calc(100vh - 28px); padding: 14px; }
+.wall .ticker .msg .text { font-size: 1.25rem; }
+.wall h1 { font-size: 2.4rem; margin: 0; }

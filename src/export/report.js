@@ -6,6 +6,7 @@ import { structureById } from '../data/smcp.js';
 import { SEVERITY } from '../data/events.js';
 import { participantStats, goalProgress } from '../ai/analyzer.js';
 import { buildDocx, markdownToBlocks } from './docx.js';
+import { fluency, safetyIndex } from '../lab/metrics.js';
 
 const spokenKinds = ['radio', 'intercom'];
 
@@ -43,11 +44,14 @@ export function buildSessionReport({ lab, crew = [], comms = [], events = [], fo
   }
   md.push('');
   md.push('## Crew and stations');
-  md.push('| Participant | Degree | Role | Messages | Words | Spoken | Markers | Variety | SMCP accuracy |');
-  md.push('|---|---|---|---|---|---|---|---|---|');
+  md.push(`**Ship Safety Index (team):** ${safetyIndex({ events, comms, crew, now: end }).score}/100`);
+  md.push('');
+  md.push('| Participant | Degree | Role | Messages | Words | Spoken | Fluency (wpm · ASR conf.) | Markers | Variety | SMCP accuracy |');
+  md.push('|---|---|---|---|---|---|---|---|---|---|');
   for (const c of people) {
     const s = participantStats(msgsOf(c.uid));
-    md.push(`| ${c.name} | ${careerById(c.careerId)?.short || '—'} | ${roleById(c.roleId)?.en || '—'} | ${s.messages} | ${s.words} | ${s.spoken} | ${s.markers} | ${s.variety} | ${s.smcpAccuracy ?? '—'}% |`);
+    const fl = fluency(msgsOf(c.uid));
+    md.push(`| ${c.name} | ${careerById(c.careerId)?.short || '—'} | ${roleById(c.roleId)?.en || '—'} | ${s.messages} | ${s.words} | ${s.spoken} | ${fl.wpm ? `${fl.wpm} · ${fl.confidence ?? '—'}%` : '—'} | ${s.markers} | ${s.variety} | ${s.smcpAccuracy ?? '—'}% |`);
   }
   md.push('');
   md.push('## Incidents and reaction times');
@@ -74,8 +78,14 @@ export function buildSessionReport({ lab, crew = [], comms = [], events = [], fo
   md.push('## Transcript');
   md.push('| Time | Channel | From | To | Message |');
   md.push('|---|---|---|---|---|');
-  const shown = comms.filter((m) => m.kind !== 'log' && m.kind !== 'whisper' && (!focusUid || m.fromUid === focusUid || m.kind === 'npc' || m.kind === 'system' || m.toUid === focusUid));
+  const shown = comms.filter((m) => m.kind !== 'log' && m.kind !== 'whisper' && m.kind !== 'review' && (!focusUid || m.fromUid === focusUid || m.kind === 'npc' || m.kind === 'system' || m.toUid === focusUid));
   for (const m of shown) md.push(`| ${hhmm(new Date(m.ts))} | ${m.channel || ''} | ${(m.from || '').replace(/\|/g, '/')} | ${(m.to || '').replace(/\|/g, '/')} | ${(m.text || '').replace(/\|/g, '/').replace(/\n/g, ' ')}${m.spoken ? ' 🎙' : ''} |`);
+  const reviews = comms.filter((m) => m.kind === 'review' && (!focusUid || m.toUid === focusUid));
+  if (reviews.length) {
+    md.push('');
+    md.push('## Peer feedback');
+    for (const r of reviews) md.push(`- To ${crew.find((c) => c.uid === r.toUid)?.name || '—'}: clarity ${r.review?.clarity}/4 · procedure ${r.review?.procedure}/4 · precision ${r.review?.precision}/4 — ${r.text}`);
+  }
   const logs = comms.filter((m) => m.kind === 'log' && (!focusUid || m.fromUid === focusUid));
   if (logs.length) {
     md.push('');

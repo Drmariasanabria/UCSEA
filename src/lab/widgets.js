@@ -13,12 +13,31 @@ import { stationName } from '../ai/npc.js';
 
 const markerColor = Object.fromEntries(MARKERS.map((m) => [m.id, m.color]));
 
+// ---------- glossary in context ----------
+let glossRe = null;
+let glossMap = new Map();
+const MARKER_WORDS = new Set(MARKERS.map((m) => m.id.toLowerCase()));
+/** Feed the collaborative glossary so technical terms are highlighted in messages with their Spanish meaning. */
+export function setGlossaryIndex(terms = []) {
+  const usable = terms.filter((t) => t.term && t.term.length >= 3 && !MARKER_WORDS.has(t.term.toLowerCase())).sort((a, b) => b.term.length - a.term.length).slice(0, 400);
+  glossMap = new Map(usable.map((t) => [t.term.toLowerCase(), t]));
+  glossRe = usable.length ? new RegExp(`\\b(${usable.map((t) => escapeHtml(t.term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi') : null;
+}
+function highlightGlossary(html) {
+  if (!glossRe) return html;
+  return html.replace(glossRe, (w) => {
+    const t = glossMap.get(w.toLowerCase());
+    if (!t) return w;
+    return `<abbr class="gloss" title="${escapeHtml(`${t.term} = ${t.es || ''}${t.def ? ' — ' + t.def : ''}`)}">${w}</abbr>`;
+  });
+}
+
 // ---------- message ----------
 export function messageEl(m, { viewer, showAnalysis = true, onPlay, extra } = {}) {
   const mine = m.fromUid === viewer;
   const cls = ['msg', mine ? 'mine' : '', m.kind === 'npc' ? 'npc' : '', m.kind === 'system' ? 'system' : '', m.kind === 'whisper' ? 'whisper' : '',
-    /\b(mayday|pan[- ]?pan)\b/i.test(m.text) ? 'distress' : ''].filter(Boolean).join('.');
-  const textHtml = escapeHtml(m.text).replace(/\b(INSTRUCTION|ADVICE|WARNING|INFORMATION|QUESTION|ANSWER|REQUEST|INTENTION)\b/g,
+    /\b(mayday|pan[- ]?pan)\b/i.test(m.text) ? 'distress' : '', m.kind === 'review' ? 'whisper' : ''].filter(Boolean).join('.');
+  const textHtml = highlightGlossary(escapeHtml(m.text)).replace(/\b(INSTRUCTION|ADVICE|WARNING|INFORMATION|QUESTION|ANSWER|REQUEST|INTENTION)\b/g,
     (x) => `<b style="color:${markerColor[x]}">${x}</b>`);
   const a = m.analysis;
   return h('div.' + cls, { dataset: { id: m.id } },
@@ -268,7 +287,7 @@ export function radioPanel(session, { channels, defaultChannel = '16', compact =
     if (lastResult?.text) {
       ta.value = lastResult.text;
       doPreview();
-      if (st.lab?.autoSendVoice !== false) await doSend({ spoken: true, confidence: lastResult.confidence });
+      if (st.lab?.autoSendVoice !== false) await doSend({ spoken: true, confidence: lastResult.confidence, speechMs: lastResult.durationMs });
     }
   };
   pttBtn.addEventListener('pointerdown', down);

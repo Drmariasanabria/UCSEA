@@ -60,6 +60,7 @@ export function createSession(labId, user, { asUid = null, isHost = false } = {}
   function visibleComms(channels = null) {
     return s.comms.filter((m) => {
       if (m.kind === 'whisper') return m.toUid === viewer || m.fromUid === viewer || user.role === 'teacher' && !asUid;
+      if (m.kind === 'review') return m.toUid === viewer || m.fromUid === viewer || (user.role === 'teacher' && !asUid);
       if (m.kind === 'log') return m.fromUid === viewer || (user.role === 'teacher' && !asUid);
       if (m.kind === 'system' || !channels) return true;
       return channels.includes(String(m.channel));
@@ -97,6 +98,8 @@ export function createSession(labId, user, { asUid = null, isHost = false } = {}
       analysis: { structures: analysis.structures, issues: analysis.issues, words: analysis.words, markers: analysis.markers },
       spoken: !!opts.spoken,
       confidence: opts.confidence ?? null,
+      speechMs: opts.speechMs ?? null,
+      review: opts.review || null,
       eventRef: opts.eventRef || null,
     });
     if (kind === 'radio' || kind === 'intercom') maybeNpcReply(msg).catch((e) => console.error('[npc]', e));

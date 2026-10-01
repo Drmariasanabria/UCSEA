@@ -18,6 +18,8 @@ import { shipDiagram } from '../ui/ship-diagram.js';
 import { getOcean } from '../main.js';
 import { participantStats } from '../ai/analyzer.js';
 import { buildSessionReport } from '../export/report.js';
+import { safetyIndex, safetyColor } from '../lab/metrics.js';
+import { setGlossaryIndex } from '../lab/widgets.js';
 
 const HELM_ROLES = ['master', 'chief_officer', 'second_officer', 'third_officer', 'oow'];
 
@@ -122,7 +124,14 @@ function consoleView(root, session, user) {
       tasksPanel(lab, st.events, me(), myMsgs()),
       h('hr'),
       h('div.panel-head', h('h4', icon('trophy'), 'Estructuras obligatorias')),
-      goalsPanel(lab.goals, myMsgs()));
+      goalsPanel(lab.goals, myMsgs()),
+      reviewsReceived());
+  }
+  function reviewsReceived() {
+    const got = st.comms.filter((m) => m.kind === 'review' && m.toUid === session.viewer);
+    if (!got.length) return null;
+    return h('div', h('hr'), h('div.panel-head', h('h4', icon('chat'), 'Feedback de compañeros')),
+      got.map((m) => h('div.task', h('div.small', m.review ? `Claridad ${m.review.clarity}/4 · Procedimiento ${m.review.procedure}/4 · Precisión ${m.review.precision}/4` : ''), h('div', m.text))));
   }
   leftCol.append(briefEl, alarmsEl, tasksEl);
 
@@ -234,8 +243,10 @@ function consoleView(root, session, user) {
       onRaise: session.spectating ? null : raiseEvent,
       onLog: session.spectating ? null : () => openLogbook(session),
       extra: [
+        (() => { const si = safetyIndex({ events: st.events, comms: st.comms, crew: st.crew.filter(session.online) }); return h('div.row', { title: 'Índice de seguridad del buque (equipo): baja si las alarmas no se reconocen o nadie responde por radio a tiempo.', style: { gap: '8px' } }, h('div.safety-ring', { style: { '--v': si.score, '--c': safetyColor(si.score), width: '48px', height: '48px' } }, h('b', { style: { fontSize: '.9rem' } }, si.score)), h('span.small', 'Seguridad')); })(),
         h('button.btn.small', { onclick: saveToPortfolio, disabled: session.spectating }, icon('folder'), 'Portafolio'),
-        h('button.btn.small.ghost', { onclick: () => { if (session.spectating) return; rolePicker(root, session, user, () => {}); go('lab/' + st.lab.id); } , title: 'Cambiar de puesto' }, icon('users')),
+        h('button.btn.small.ghost', { title: 'Cambiar de puesto', onclick: async () => { if (session.spectating) return; await api.removeCrew(st.lab.id, user.uid); location.reload(); } }, icon('users')),
+        (st.lab.status === 'ended' || st.lab.peerReview) && !session.spectating ? h('button.btn.small.primary', { onclick: peerReview }, icon('chat'), 'Evaluar a un compañero') : null,
       ],
     }));
   }
@@ -299,8 +310,9 @@ function consoleView(root, session, user) {
   }));
   unsubs.push(session.on('events', ({ added } = {}) => { drawLeft(); syncAlarms(added); }));
   let lastStation = station().id;
+  let endedNotified = st.lab.status === 'ended';
   unsubs.push(session.on('lab', () => {
-    if (st.lab.status === 'ended') { toast('La sesión ha finalizado. Guarda tu trabajo en el portafolio.', 'info', 8000); }
+    if (st.lab.status === 'ended' && !endedNotified) { endedNotified = true; toast('La sesión ha finalizado. Guarda tu trabajo en el portafolio y evalúa a un compañero.', 'info', 8000); }
     setAmbientWeather(st.lab.world?.seaState ?? 3);
     drawStatus(); drawLeft(); drawInstruments();
   }));
@@ -316,6 +328,33 @@ function consoleView(root, session, user) {
   drawStatus(); drawLeft(); drawInstruments();
   syncAlarms([]);
   startAmbient(0.6);
+  unsubs.push(api.watchGlossary((terms) => setGlossaryIndex(terms)));
+
+  // ----- peer review (formative, anonymous to the class, visible to the teacher)
+  function peerReview() {
+    const others = st.crew.filter((c) => c.uid !== session.viewer).sort((a, b) => a.uid.localeCompare(b.uid));
+    if (!others.length) return toast('No hay compañeros que evaluar.', 'warn');
+    const sorted = st.crew.map((c) => c.uid).sort();
+    const peer = others.find((c) => c.uid === sorted[(sorted.indexOf(session.viewer) + 1) % sorted.length]) || others[0];
+    const samples = st.comms.filter((m) => m.fromUid === peer.uid && ['radio', 'intercom'].includes(m.kind)).slice(-3);
+    const rv = { clarity: 0, procedure: 0, precision: 0 };
+    const crit = [['clarity', 'Claridad del mensaje'], ['procedure', 'Procedimiento SMCP (llamada, marcadores, Over)'], ['precision', 'Precisión de datos (horas, posiciones, unidades)']];
+    const comment = h('textarea', { rows: 3, placeholder: 'One thing they did well + one concrete improvement (English or Spanish).' });
+    modal({
+      title: `Evaluación entre iguales — ${roleById(peer.roleId)?.en || 'compañero'}`,
+      wide: true,
+      body: h('div',
+        h('p.small', 'Tu evaluación llega a tu compañero/a sin tu nombre; el docente sí la ve. Sé concreto y respetuoso.'),
+        samples.length ? samples.map((m) => messageEl(m, { viewer: 'none', showAnalysis: false })) : h('p.muted', 'Aún no ha transmitido nada.'),
+        crit.map(([k, label]) => h('div', { style: { margin: '10px 0' } }, h('b', label), h('div.row', [1, 2, 3, 4].map((v) => h('button.chip', { onclick: (e) => { rv[k] = v; [...e.target.parentNode.children].forEach((x) => x.classList.remove('on')); e.target.classList.add('on'); } }, String(v)))))),
+        field('Comentario', comment)),
+      actions: [{ label: 'Enviar evaluación', kind: 'primary', onClick: async () => {
+        if (!rv.clarity || !rv.procedure || !rv.precision || !comment.value.trim()) { toast('Completa los tres criterios y el comentario.', 'warn'); return false; }
+        await session.send({ text: comment.value.trim(), channel: 'REVIEW', kind: 'review', whisperTo: peer.uid, review: rv, fromName: 'Peer' });
+        sfx.success(); toast('Evaluación enviada. ¡Gracias!', 'success');
+      } }],
+    });
+  }
 
   // ----- raise event (students create events)
   function raiseEvent() {

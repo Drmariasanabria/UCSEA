@@ -13,6 +13,7 @@ const ROUTES = {
   lab: () => import('./views/lab-hub.js'),
   control: () => import('./views/teacher-console.js'),
   debrief: () => import('./views/debrief.js'),
+  bridge: () => import('./views/bridge-wall.js'),
   glossary: () => import('./views/glossary.js'),
   portfolio: () => import('./views/portfolio.js'),
   missions: () => import('./views/missions.js'),
@@ -85,7 +86,7 @@ async function render() {
   const mod = await loader();
   const shell = h('div');
   const content = h('main#main');
-  mount(root, route === 'login' ? null : topbar(route), content);
+  mount(root, route === 'login' || route === 'bridge' ? null : topbar(route), content);
   try {
     cleanup = await mod.default(content, { path, query, user, rerender: render });
   } catch (e) {

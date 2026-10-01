@@ -19,11 +19,13 @@ export function createPTT({ lang = 'en-GB', onInterim, onFinal, onError, record 
   let stream = null;
   let active = false;
   let audioUrl = null;
+  let startedAt = 0;
 
   async function start() {
     if (active) return;
     active = true;
     finalText = '';
+    startedAt = Date.now();
     confidences = [];
     audioUrl = null;
     sfx.squelch();
@@ -66,7 +68,7 @@ export function createPTT({ lang = 'en-GB', onInterim, onFinal, onError, record 
       const finish = () => {
         const text = finalText.trim();
         const confidence = confidences.length ? confidences.reduce((a, b) => a + b, 0) / confidences.length : null;
-        const result = { text, confidence, audioUrl };
+        const result = { text, confidence, audioUrl, durationMs: Date.now() - startedAt };
         onFinal?.(result);
         resolve(result);
       };

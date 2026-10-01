@@ -46,7 +46,7 @@ function replay(root, data, user) {
   const visibleComms = comms.filter((m) => m.kind !== 'whisper' || isT).filter((m) => m.kind !== 'log' || isT || m.fromUid === user.uid);
   const t0 = lab.startedAt || lab.createdAt || (comms[0]?.ts ?? Date.now());
   const t1 = Math.max(lab.endedAt || 0, comms[comms.length - 1]?.ts || 0, track[track.length - 1]?.t || 0, t0 + 60000);
-  let T = t0;
+  let T = t1; // open on the final picture; Play restarts from the beginning
   let playing = false;
   let speed = 8;
   let raf = 0;
@@ -71,7 +71,7 @@ function replay(root, data, user) {
   const scrub = h('input', { type: 'range', min: t0, max: t1, step: 1000, value: t0, style: { width: '100%' }, oninput: (e) => { T = +e.target.value; update(true); } });
   const ticks = h('div', { style: { position: 'relative', height: '16px', marginTop: '-4px' } },
     events.map((e) => h('span', { title: `${hhmm(new Date(e.ts))} ${e.titleEs}`, style: { position: 'absolute', left: `${((e.ts - t0) / (t1 - t0)) * 100}%`, top: 0, width: '4px', height: '14px', borderRadius: '2px', background: SEVERITY[e.severity]?.color || 'var(--accent)', cursor: 'pointer' }, onclick: () => { T = e.ts; update(true); } })));
-  const playBtn = h('button.btn.primary', { onclick: () => { playing = !playing; playBtn.replaceChildren(icon(playing ? 'pause' : 'play'), playing ? 'Pausa' : 'Reproducir'); if (playing) { lastFrame = performance.now(); loop(); } } }, icon('play'), 'Reproducir');
+  const playBtn = h('button.btn.primary', { onclick: () => { if (!playing && T >= t1) T = t0; playing = !playing; playBtn.replaceChildren(icon(playing ? 'pause' : 'play'), playing ? 'Pausa' : 'Reproducir'); if (playing) { lastFrame = performance.now(); loop(); } } }, icon('play'), 'Reproducir');
   const speedSel = h('select', { style: { maxWidth: '110px' }, onchange: (e) => (speed = +e.target.value) }, [1, 4, 8, 16, 60].map((s) => h('option', { value: s, selected: s === speed }, `×${s}`)));
   const commsBox = h('div.comms', { style: { maxHeight: '58vh' } });
   const activeBox = h('div');

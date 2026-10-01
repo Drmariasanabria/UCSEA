@@ -175,3 +175,28 @@ test('zip writer produces a valid archive', () => {
   const z = zip([{ name: 'a.txt', data: 'hello' }]);
   assert.equal(new DataView(z.buffer).getUint32(0, true), 0x04034b50);
 });
+
+import { safetyIndex, rotationPlan, fluency } from '../src/lab/metrics.js';
+
+test('ship safety index penalises unanswered distress and rewards timely answers', () => {
+  const ev = { id: 'e', ts: 0, severity: 'distress', titleEs: 'Fire', alarm: 'fire', acks: {} };
+  const crew = [{ uid: 'a' }, { uid: 'b' }];
+  const silent = safetyIndex({ events: [ev], comms: [], crew, now: 10 * 60000 });
+  const answered = safetyIndex({ events: [{ ...ev, acks: { a: 1, b: 1 } }], comms: [{ kind: 'radio', fromUid: 'a', ts: 20000, text: 'MAYDAY MAYDAY MAYDAY, this is X. Over.' }], crew, now: 10 * 60000 });
+  assert.ok(silent.score < answered.score, `${silent.score} < ${answered.score}`);
+  assert.ok(silent.factors.some((f) => f.value < 0));
+});
+
+test('watch handover rotates roles inside the degree track without collisions', () => {
+  const plan = rotationPlan([{ uid: 'a', careerId: 'nautica', roleId: 'oow' }, { uid: 'b', careerId: 'nautica', roleId: 'master' }, { uid: 'c', careerId: 'marina', roleId: 'eto' }], ROLES);
+  const to = plan.map((p) => p.to);
+  assert.equal(new Set(to).size, to.length);
+  for (const p of plan) assert.notEqual(p.to, p.from);
+  assert.equal(ROLES.find((r) => r.id === plan[2].to).career, 'marina');
+});
+
+test('fluency from spoken messages', () => {
+  const f = fluency([{ spoken: true, speechMs: 6000, confidence: 0.9, text: 'Channel Traffic this is Nordic Kestrel request traffic information over' }]);
+  assert.equal(f.wpm, 100);
+  assert.equal(f.confidence, 90);
+});

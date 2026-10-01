@@ -20,6 +20,9 @@ import { speak } from '../core/speech.js';
 import { exportSession, EXPORT_FORMATS, buildSessionReport } from '../export/report.js';
 import { ALARM_PATTERNS } from '../core/audio.js';
 import { PRESET_GOALS } from './lab-hub.js';
+import { STORYLINES } from '../data/storylines.js';
+import { safetyIndex, safetyColor, rotationPlan, fluency } from '../lab/metrics.js';
+import { setGlossaryIndex } from '../lab/widgets.js';
 
 export const RUBRIC = [
   { id: 'procedure', es: 'Procedimiento radio / SMCP', d: ['Sin estructura de llamada', 'Llamada incompleta', 'Llamada correcta con algún fallo', 'Procedimiento impecable'] },
@@ -64,16 +67,20 @@ export default async function render(root, { path, user }) {
       h('div.row.between', h('span.eyebrow', 'Código de embarque'), h('span.badge.sev-' + ({ running: 'safety', paused: 'urgency', briefing: 'routine', ended: 'routine' }[lab.status] || 'routine'), { briefing: 'BRIEFING', running: 'EN CURSO', paused: 'PAUSA', ended: 'FINALIZADA', archived: 'ARCHIVADA' }[lab.status] || lab.status)),
       h('div.big-code', { title: url, onclick: () => { navigator.clipboard?.writeText(url); toast('Enlace copiado', 'success'); } }, lab.code),
       h('div.small', lab.title, ' · ', scenarioById(lab.scenarioId).area),
+
       h('div.row', { style: { marginTop: '10px' } },
         h('span.mono', { style: { color: 'var(--gold)', fontSize: '1.3rem' } }, shipClock(lab)),
-        h('span.small', 'Transcurrido ' + fmtDuration(elapsed))),
+        h('span.small.grow', 'Transcurrido ' + fmtDuration(elapsed)),
+        (() => { const si = safetyIndex({ events: st.events, comms: st.comms, crew: st.crew.filter(session.online) }); return h('div.safety-ring', { style: { '--v': si.score, '--c': safetyColor(si.score), width: '52px', height: '52px', cursor: 'help' }, title: 'Índice de seguridad del buque (equipo)\n' + (si.factors.map((f) => `${f.value > 0 ? '+' : ''}${f.value} ${f.es}`).join('\n') || 'Sin factores todavía') }, h('b', { style: { fontSize: '.95rem' } }, si.score)); })()),
       h('div.row', { style: { marginTop: '10px', gap: '6px' } },
         lab.status === 'briefing' || lab.status === 'paused'
           ? h('button.btn.success', { onclick: () => setStatus(lab.status === 'briefing' ? 'start' : 'resume') }, icon('play'), lab.status === 'briefing' ? 'Comenzar' : 'Reanudar')
           : null,
         lab.status === 'running' ? h('button.btn.warn', { onclick: () => setStatus('pause') }, icon('pause'), 'Pausa') : null,
         lab.status !== 'ended' ? h('button.btn.danger', { onclick: () => setStatus('end') }, icon('stop'), 'Finalizar') : h('button.btn', { onclick: () => go('debrief/' + lab.id) }, icon('log'), 'Debriefing'),
-        h('button.btn.ghost.small', { onclick: () => window.open(url + '?join=1', '_blank') }, icon('eye'), 'Abrir como alumno')));
+        h('button.btn.ghost.small', { onclick: () => window.open(url + '?join=1', '_blank') }, icon('eye'), 'Abrir como alumno'),
+        h('button.btn.ghost.small', { onclick: () => window.open(`${location.origin}${location.pathname}${location.search}#/bridge/${lab.id}`, '_blank') }, icon('radar'), 'Proyector'),
+        h('button.btn.small', { onclick: watchHandover, title: 'Rota a cada estudiante al siguiente puesto de su titulación y lanza el relevo' }, icon('users'), 'Relevo de guardia')));
   }
 
   async function setStatus(action) {
@@ -101,6 +108,16 @@ export default async function render(root, { path, user }) {
     }
   }
   const pickOwn = (o) => ({ course: o.course, speed: o.speed });
+
+  async function watchHandover() {
+    if (!st.crew.length) return toast('No hay tripulación conectada.', 'warn');
+    if (!(await confirmDialog('Relevo de guardia', 'Cada estudiante pasará al siguiente puesto de su titulación y deberá hacer el briefing de relevo. ¿Continuar?', 'Relevar', 'primary'))) return;
+    const plan = rotationPlan(st.crew, ROLES);
+    for (const p of plan) if (p.to !== p.from) await api.updateCrew(labId, p.uid, { roleId: p.to, station: roleById(p.to)?.station, previousRoles: [...(st.crew.find((c) => c.uid === p.uid)?.previousRoles || []), p.from] });
+    await systemMsg('🔁 Relevo de guardia: ' + plan.map((p) => `${st.crew.find((c) => c.uid === p.uid)?.name}: ${roleById(p.from)?.en} → ${roleById(p.to)?.en}`).join(' · '));
+    await fireEvent(st.lab, { eventId: 'watch_handover', by: { uid: user.uid, name: user.name, role: 'Instructor' } });
+    sfx.bell(2);
+  }
   const systemMsg = (text) => api.sendComm(labId, { kind: 'system', channel: 'SYS', from: 'INSTRUCTOR', fromUid: 'system', text });
 
   function memberStats(c) {
@@ -306,7 +323,14 @@ export default async function render(root, { path, user }) {
             Object.entries(CATEGORIES).map(([k, v]) => h('button.chip' + (evCat === k ? '.on' : ''), { onclick: () => { evCat = k; drawEvents(); } }, v))),
           h('div.event-grid', pool.map((e) => h('button.event-btn.' + e.severity, { onclick: () => triggerDialog(e) },
             h('b', e.es), h('span.small', e.en), h('span.small.dim', `${rolesTouched(e).length} roles con tarea · ${e.alarm ? '🔔 ' + e.alarm : 'sin alarma'}`)))),
-          h('div.row', { style: { marginTop: '14px' } }, h('button.btn', { onclick: customEventDialog }, icon('plus'), 'Crear evento personalizado'), h('button.btn', { onclick: scheduleDialog }, icon('clock'), 'Programar en cronograma'))),
+          h('div.row', { style: { marginTop: '14px' } }, h('button.btn', { onclick: customEventDialog }, icon('plus'), 'Crear evento personalizado'), h('button.btn', { onclick: scheduleDialog }, icon('clock'), 'Programar en cronograma')),
+          h('h4', { style: { marginTop: '18px' } }, 'Historias encadenadas (un clic)'),
+          h('div.event-grid', STORYLINES.filter((sl) => !sl.scenarios || sl.scenarios.includes(lab.scenarioId)).map((sl) => h('button.event-btn.urgency', { onclick: async () => {
+            const elapsed = lab.startedAt ? Math.floor((Date.now() - lab.startedAt) / 60000) : 0;
+            const add = sl.steps.map((x) => ({ id: makeId('s'), eventId: x.eventId, atMin: elapsed + x.atMin, fired: false, storyline: sl.id }));
+            await api.updateLab(labId, { schedule: [...(lab.schedule || []), ...add].sort((a, b) => a.atMin - b.atMin) });
+            toast(`Historia «${sl.es}» programada (${add.length} eventos)`, 'success');
+          } }, h('b', sl.es), h('span.small', sl.blurb), h('span.small.dim', sl.steps.map((x) => `+${x.atMin}′`).join(' · ')))))),
         h('div.col',
           h('div.panel', h('h4', icon('alarm'), `Activos (${active.length})`),
             active.length ? active.map((e) => h('div.active-ev', h('div', h('b', e.titleEs), h('div.small', `${hhmm(new Date(e.ts))} · ${e.by?.name || ''}${e.effectsApplied === false ? ' · (notificado por alumno)' : ''}`)),
@@ -438,7 +462,8 @@ export default async function render(root, { path, user }) {
       h('div.panel', h('h4', 'Instrucciones de la tarea'), brief,
         h('div.row', { style: { marginTop: '8px' } },
           h('label.check', h('input', { type: 'checkbox', checked: !!lab.speakingRequired, onchange: (e) => api.updateLab(labId, { speakingRequired: e.target.checked }) }), h('span', 'Radio solo por voz')),
-          h('label.check', h('input', { type: 'checkbox', checked: lab.autoSendVoice !== false, onchange: (e) => api.updateLab(labId, { autoSendVoice: e.target.checked }) }), h('span', 'Enviar al soltar PTT')))),
+          h('label.check', h('input', { type: 'checkbox', checked: lab.autoSendVoice !== false, onchange: (e) => api.updateLab(labId, { autoSendVoice: e.target.checked }) }), h('span', 'Enviar al soltar PTT')),
+          h('label.check', h('input', { type: 'checkbox', checked: !!lab.peerReview, onchange: (e) => api.updateLab(labId, { peerReview: e.target.checked }) }), h('span', 'Evaluación entre iguales abierta')))),
       h('div.panel', h('h4', 'Estructuras obligatorias'),
         h('div.row', { style: { marginBottom: '10px' } }, Object.entries(PRESET_GOALS).map(([k, v]) => h('button.chip', { onclick: () => { [...goalsBox.children].forEach((w) => { const g = v.find((x) => x.id === w.dataset.id); w.querySelector('input[type=checkbox]').checked = !!g; if (g) w.querySelector('input[type=number]').value = g.count; }); } }, k))),
         goalsBox),
@@ -485,14 +510,14 @@ export default async function render(root, { path, user }) {
       const total = RUBRIC.reduce((acc, r) => acc + (a[r.id] || 0), 0);
       return h('tr',
         h('td', h('b', c.name), h('div.small', roleById(c.roleId)?.en || '')),
-        h('td.mono', s.messages), h('td.mono', s.spoken), h('td.mono', s.variety), h('td.mono', s.smcpAccuracy != null ? s.smcpAccuracy + '%' : '—'), h('td.mono', fmtReaction(avgReact)),
+        h('td.mono', s.messages), h('td.mono', s.spoken), h('td.mono', (() => { const f = fluency(memberStats(c).msgs); return f.wpm ? `${f.wpm} ppm · ${f.confidence ?? '—'}%` : '—'; })()), h('td.mono', s.variety), h('td.mono', s.smcpAccuracy != null ? s.smcpAccuracy + '%' : '—'), h('td.mono', fmtReaction(avgReact)),
         h('td', st.lab.goals?.length ? goalsDone(c) : '—'),
         h('td', h('b.mono', total ? `${total}/${RUBRIC.length * 4}` : '—')),
         h('td', h('button.btn.small', { onclick: () => rubricDialog(c) }, icon('edit'), 'Rúbrica')));
     });
     mount(body, h('div.col',
       h('p.small', 'Indicadores automáticos y explicables (no sustituyen tu juicio). La rúbrica está alineada con los descriptores de interacción oral del MCER y las competencias de comunicación del Convenio STCW / IMO Model Course 3.17.'),
-      h('table', h('thead', h('tr', ['Estudiante', 'Mensajes', 'Voz', 'Variedad', 'SMCP', 'Reacción media', 'Objetivos', 'Rúbrica', ''].map((x) => h('th', x)))), h('tbody', rows))));
+      h('table', h('thead', h('tr', ['Estudiante', 'Mensajes', 'Voz', 'Fluidez (ppm · conf.)', 'Variedad', 'SMCP', 'Reacción media', 'Objetivos', 'Rúbrica', ''].map((x) => h('th', x)))), h('tbody', rows))));
   }
 
   function rubricDialog(c) {
@@ -571,6 +596,7 @@ export default async function render(root, { path, user }) {
 
   // ---------- subscriptions ----------
   const unsubs = [
+    api.watchGlossary((terms) => setGlossaryIndex(terms)),
     session.on('lab', () => { drawSession(); drawTabs(); if (['world', 'brief', 'ai'].includes(tab)) { /* keep inputs stable */ } else if (tab === 'events') drawEvents(); }),
     session.on('crew', () => { drawRoster(); drawRight(); if (tab === 'assess' || tab === 'export') drawBody(); }),
     session.on('comms', ({ added } = {}) => {
