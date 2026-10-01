@@ -1,0 +1,84 @@
+rules_version = '2';
+// MAR-ESP SIM UC v10 — Firestore security rules.
+// Teacher role = e-mail listed in config/instructors { emails: [...] } (edit it in the Firebase console).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function allowlisted() {
+      return signedIn() && request.auth.token.email != null &&
+        exists(/databases/$(database)/documents/config/instructors) &&
+        request.auth.token.email.lower() in get(/databases/$(database)/documents/config/instructors).data.emails;
+    }
+    function isTeacher() {
+      return allowlisted() &&
+        get(/databases/$(database)/documents/profiles/$(me())).data.role == 'teacher';
+    }
+    function onlyChanges(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    match /config/{name} {
+      allow read: if signedIn();
+      allow write: if isTeacher();
+    }
+
+    match /profiles/{uid} {
+      allow read: if signedIn();
+      allow create: if signedIn() && me() == uid &&
+        (request.resource.data.role == 'student' || (request.resource.data.role == 'teacher' && allowlisted()));
+      allow update: if signedIn() && me() == uid &&
+        (!('role' in request.resource.data.diff(resource.data).affectedKeys()) ||
+          request.resource.data.role == 'student' || allowlisted());
+    }
+
+    match /labs/{labId} {
+      allow read: if signedIn();
+      allow create: if isTeacher() && request.resource.data.ownerUid == me();
+      // Students may only touch the shared ship state and the AI hand-off fields.
+      allow update: if isTeacher() || (signedIn() && onlyChanges(['ownShip', 'aiQueue', 'updatedAt']));
+      allow delete: if isTeacher();
+
+      match /crew/{uid} {
+        allow read: if signedIn();
+        allow write: if signedIn() && (me() == uid || isTeacher());
+      }
+      match /comms/{id} {
+        allow read: if signedIn();
+        // NPC replies can be written by any participant's client (AI fallback); people only as themselves.
+        allow create: if signedIn() &&
+          (request.resource.data.fromUid == me() || request.resource.data.kind in ['npc', 'system']);
+        allow update: if isTeacher() || (signedIn() && resource.data.fromUid == me()) ||
+          (signedIn() && onlyChanges(['analysis', 'replied', 'aiStatus']));
+        allow delete: if isTeacher();
+      }
+      match /events/{id} {
+        allow read: if signedIn();
+        allow create: if signedIn();
+        allow update: if isTeacher() || (signedIn() && onlyChanges(['acks', 'notes']));
+        allow delete: if isTeacher();
+      }
+    }
+
+    match /glossaryTerms/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && (request.resource.data.authorUid == me() || isTeacher());
+      allow update: if isTeacher() || (signedIn() && resource.data.authorUid == me()) ||
+        (signedIn() && onlyChanges(['votes', 'voters', 'related', 'updatedAt']));
+      allow delete: if isTeacher() || (signedIn() && resource.data.authorUid == me());
+    }
+
+    match /portfolios/{uid}/entries/{id} {
+      allow read: if signedIn() && (me() == uid || isTeacher() || resource.data.shared == true);
+      allow create, delete: if signedIn() && me() == uid;
+      allow update: if signedIn() && (me() == uid || (isTeacher() && onlyChanges(['teacherComment', 'teacherScore'])));
+    }
+
+    match /missionRuns/{id} {
+      allow read: if signedIn() && (resource.data.uid == me() || isTeacher());
+      allow create: if signedIn() && request.resource.data.uid == me();
+      allow update: if signedIn() && resource.data.uid == me();
+    }
+  }
+}

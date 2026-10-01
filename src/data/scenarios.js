@@ -1,0 +1,102 @@
+// Base scenarios for a Communication Lab session. All ships and stations are fictional
+// training identities; geography is real so students can reason about it.
+
+export const SCENARIOS = [
+  {
+    id: 'tss_night',
+    es: 'Guardia nocturna en un dispositivo de separación de tráfico',
+    en: 'Night watch in a Traffic Separation Scheme',
+    area: 'South-west lane, Dover Strait TSS',
+    blurb: 'Tráfico denso, remolcadores, transbordadores cruzando y un centro VTS exigente. Inspirado en el caso Rickmers Dubai (MAIB 29/2014).',
+    image: 'night',
+    ownShip: { name: 'Nordic Kestrel', callsign: 'D5KR7', mmsi: '636092871', type: 'Multi-purpose cargo ship', length: 154, draught: 8.6, pob: 17, course: 233, speed: 15.4, cargo: 'Project cargo and containers' },
+    world: { timeOfDay: 'night', clock: '0115', wind: 18, windDir: 225, seaState: 4, visibility: 8, rain: false, fog: false, depth: 45, gnss: true },
+    stations: { vts: 'Channel Traffic', mrcc: 'Channel Coastguard', port: 'Newhaven Harbour', agent: 'Seaways Agency', pilot: 'Channel Pilots', company: 'Kestrel Shipmanagement', tug: 'Tug Harbour Titan' },
+    traffic: [
+      { name: 'Baltic Heron', type: 'Bulk carrier', bearing: 250, range: 5.5, course: 233, speed: 11, ais: true },
+      { name: 'Stena Coastline', type: 'Ro-Ro ferry', bearing: 300, range: 7, course: 140, speed: 19, ais: true },
+      { name: 'Maersk Tarifa', type: 'Container ship', bearing: 40, range: 6, course: 52, speed: 17, ais: true },
+      { name: 'Unknown target', type: 'Fishing vessel?', bearing: 200, range: 4, course: 80, speed: 4, ais: false },
+    ],
+  },
+  {
+    id: 'santander_approach',
+    es: 'Aproximación al puerto de Santander con práctico',
+    en: 'Port approach and pilot boarding — Santander',
+    area: 'Approaches to Santander, Bay of Biscay',
+    blurb: 'Llamadas del consignatario, cambios de hora del práctico, bancos de niebla y coordinación con remolcadores.',
+    image: 'dawn',
+    ownShip: { name: 'Cantabrian Star', callsign: 'EAXZ2', mmsi: '224113580', type: 'Ro-Ro cargo', length: 186, draught: 7.4, pob: 21, course: 180, speed: 12, cargo: 'Vehicles and trailers' },
+    world: { timeOfDay: 'dawn', clock: '0730', wind: 12, windDir: 315, seaState: 3, visibility: 5, rain: false, fog: false, depth: 60, gnss: true },
+    stations: { vts: 'Santander Traffic', mrcc: 'Santander Rescue', port: 'Santander Port Control', agent: 'North Port Agency', pilot: 'Santander Pilots', company: 'Cantabrian Ro-Ro Lines', tug: 'Tug Sardinero' },
+    traffic: [
+      { name: 'Galicia Express', type: 'Ferry', bearing: 160, range: 4, course: 0, speed: 18, ais: true },
+      { name: 'Pilot boat', type: 'Pilot launch', bearing: 175, range: 3, course: 350, speed: 9, ais: true },
+      { name: 'Virgen del Mar', type: 'Fishing vessel', bearing: 220, range: 2.5, course: 120, speed: 6, ais: true },
+    ],
+  },
+  {
+    id: 'strait_crossing',
+    es: 'Estrecho de Gibraltar: cruce con transbordadores',
+    en: 'Strait of Gibraltar: crossing ferries',
+    area: 'Strait of Gibraltar TSS',
+    blurb: 'Situaciones de cruce, buques sin gobierno y el centro VTS dando información de tráfico continua.',
+    image: 'day',
+    ownShip: { name: 'Atlantic Aurora', callsign: '9HA4521', mmsi: '249631000', type: 'Product tanker', length: 183, draught: 11.2, pob: 23, course: 270, speed: 13, cargo: 'Gasoil' },
+    world: { timeOfDay: 'day', clock: '1430', wind: 22, windDir: 90, seaState: 4, visibility: 10, rain: false, fog: false, depth: 300, gnss: true },
+    stations: { vts: 'Strait Traffic', mrcc: 'Strait Rescue', port: 'Algeciras Port Control', agent: 'Bay Shipping Agency', pilot: 'Algeciras Pilots', company: 'Aurora Tankers', tug: 'Tug Punta Carnero' },
+    traffic: [
+      { name: 'Fast Ferry Tanger', type: 'HSC ferry', bearing: 200, range: 5, course: 10, speed: 30, ais: true },
+      { name: 'MSC Valencia', type: 'Container ship', bearing: 90, range: 4, course: 270, speed: 18, ais: true },
+      { name: 'Ceuta Jet', type: 'HSC ferry', bearing: 330, range: 6, course: 170, speed: 28, ais: true },
+      { name: 'Yacht', type: 'Sailing yacht', bearing: 300, range: 2, course: 200, speed: 5, ais: false },
+    ],
+  },
+  {
+    id: 'alongside_bunkering',
+    es: 'Atracado: bunkering, inspección y operaciones de puerto',
+    en: 'Alongside: bunkering, PSC and port operations',
+    area: 'Bilbao port, berth A-4',
+    blurb: 'Comunicación interna a bordo y con tierra: bunkering, inspección PSC, retrasos documentales y seguridad en cubierta.',
+    image: 'port',
+    ownShip: { name: 'Biscay Trader', callsign: 'C4PB9', mmsi: '210448000', type: 'General cargo ship', length: 128, draught: 6.9, pob: 15, course: 0, speed: 0, cargo: 'Steel coils' },
+    world: { timeOfDay: 'day', clock: '0915', wind: 10, windDir: 270, seaState: 1, visibility: 10, rain: true, fog: false, depth: 14, gnss: true },
+    stations: { vts: 'Bilbao Traffic', mrcc: 'Bilbao Rescue', port: 'Bilbao Port Control', agent: 'Basque Maritime Agency', pilot: 'Bilbao Pilots', company: 'Trader Shipping', tug: 'Tug Abra' },
+    traffic: [
+      { name: 'Bunker barge Petrolero 3', type: 'Bunker barge', bearing: 90, range: 0.05, course: 0, speed: 0, ais: true },
+      { name: 'Ebro Express', type: 'Container feeder', bearing: 20, range: 0.8, course: 200, speed: 4, ais: true },
+    ],
+  },
+  {
+    id: 'biscay_storm',
+    es: 'Travesía del Golfo de Bizkaia con temporal',
+    en: 'Bay of Biscay passage in heavy weather',
+    area: 'Bay of Biscay, 60 NM north of Cape Ortegal',
+    blurb: 'Avisos de temporal, carga, estabilidad, búsqueda y salvamento con Salvamento Marítimo.',
+    image: 'storm',
+    ownShip: { name: 'Iberian Wave', callsign: 'EBQW3', mmsi: '224558900', type: 'Car carrier', length: 199, draught: 9.1, pob: 24, course: 45, speed: 16, cargo: '4,200 vehicles' },
+    world: { timeOfDay: 'dusk', clock: '1845', wind: 30, windDir: 250, seaState: 6, visibility: 6, rain: true, fog: false, depth: 4000, gnss: true },
+    stations: { vts: 'Finisterre Traffic', mrcc: 'Coruña Rescue', port: 'Gijón Port Control', agent: 'Asturias Agency', pilot: 'Gijón Pilots', company: 'Iberian Car Carriers', tug: 'Rescue tug Marta Mata' },
+    traffic: [
+      { name: 'Santa Elvira', type: 'Fishing vessel', bearing: 315, range: 8, course: 180, speed: 3, ais: true },
+      { name: 'Nordic Bulker', type: 'Bulk carrier', bearing: 60, range: 9, course: 225, speed: 10, ais: true },
+    ],
+  },
+  {
+    id: 'offshore_field',
+    es: 'Parque eólico marino y tendido de cable',
+    en: 'Offshore wind farm and cable-laying operations',
+    area: 'North Sea, wind farm safety zone',
+    blurb: 'Zonas de seguridad, buques con maniobrabilidad restringida y coordinación con ingenieros offshore.',
+    image: 'offshore',
+    ownShip: { name: 'Northern Service', callsign: 'LAOS7', mmsi: '257390000', type: 'Offshore supply vessel', length: 88, draught: 6.2, pob: 14, course: 90, speed: 10, cargo: 'Spare parts, crew transfer' },
+    world: { timeOfDay: 'day', clock: '1100', wind: 20, windDir: 300, seaState: 4, visibility: 7, rain: false, fog: false, depth: 38, gnss: true },
+    stations: { vts: 'Humber Traffic', mrcc: 'North Sea Coastguard', port: 'Grimsby Port', agent: 'Humber Agency', pilot: 'Humber Pilots', company: 'Northern Offshore', tug: 'Tug Spurn' },
+    traffic: [
+      { name: 'Atlantic Weaver', type: 'Cable ship (RAM)', bearing: 80, range: 3, course: 0, speed: 0.5, ais: true },
+      { name: 'Windcat 12', type: 'Crew transfer vessel', bearing: 120, range: 2, course: 300, speed: 22, ais: true },
+    ],
+  },
+];
+
+export const scenarioById = (id) => SCENARIOS.find((s) => s.id === id) || SCENARIOS[0];
