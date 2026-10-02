@@ -55,7 +55,7 @@ export default function render(root, { user, query }) {
         h('label.check', h('input', { type: 'checkbox', checked: true, onchange: (e) => graph?.setLabels(e.target.checked) }), h('span', 'Etiquetas')),
         h('div.row', h('button.btn.small', { onclick: () => graph?.reheat() }, 'Reorganizar'), h('button.btn.small', { onclick: () => graph?.fit() }, 'Centrar'),
           h('button.btn.small', { onclick: () => { const a = document.createElement('a'); a.href = graph.snapshot(); a.download = 'glossary-graph.png'; a.click(); } }, 'PNG')),
-        h('p.small', 'Arrastra nodos, rueda para zoom, doble clic para abrir. «Grafo local» muestra solo los vecinos del término seleccionado.')) : null);
+        h('p.small', 'Arrastra para orbitar en 3D · Mayús + arrastrar para desplazar · rueda para zoom · clic para seleccionar · doble clic para abrir. «Grafo local» ilumina solo los vecinos del término.')) : null);
   }
 
   function feedGraph() {

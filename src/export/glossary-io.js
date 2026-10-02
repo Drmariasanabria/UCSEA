@@ -21,7 +21,7 @@ export function toAnki(terms) {
 }
 
 export function toMarkdown(terms, byId = new Map(terms.map((t) => [t.id, t]))) {
-  const lines = ['# Maritime English Glossary — MAR-ESP SIM UC', ''];
+  const lines = ['# Maritime English Glossary — UCSea', ''];
   for (const t of [...terms].sort((a, b) => a.term.localeCompare(b.term))) {
     lines.push(`## ${t.term}`);
     if (t.es) lines.push(`*ES:* ${t.es}  `);

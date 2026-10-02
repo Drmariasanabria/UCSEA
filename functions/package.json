@@ -1,5 +1,5 @@
 {
-  "name": "marespuc-functions",
+  "name": "ucsea-functions",
   "private": true,
   "type": "module",
   "engines": { "node": "22" },

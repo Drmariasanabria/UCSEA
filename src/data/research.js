@@ -1,7 +1,7 @@
 // Research instruments for the teaching-innovation project (pre/post design).
 // Likert 1–5. Items adapted to maritime communication self-efficacy and engagement.
 
-export const CONSENT_TEXT = `Participación voluntaria en el proyecto de innovación docente «MAR-ESP SIM UC». Tus respuestas se usarán de forma seudonimizada (sin nombre ni correo) para evaluar el impacto del simulador en el aprendizaje del inglés marítimo. Puedes retirar tu consentimiento en cualquier momento desde Ajustes, y tu participación o no participación no afecta a tu calificación.`;
+export const CONSENT_TEXT = `Participación voluntaria en el proyecto de innovación docente «UCSea» (MAR-ESP SIM UC). Tus respuestas se usarán de forma seudonimizada (sin nombre ni correo) para evaluar el impacto del simulador en el aprendizaje del inglés marítimo. Puedes retirar tu consentimiento en cualquier momento desde Ajustes, y tu participación o no participación no afecta a tu calificación.`;
 
 export const QUESTIONNAIRE = [
   { id: 'q1', dim: 'self-efficacy', en: 'I can make a correct VHF call using SMCP (call signs, message markers, Over/Out).', es: 'Puedo hacer una llamada VHF correcta usando SMCP.' },

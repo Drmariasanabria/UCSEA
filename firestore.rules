@@ -1,5 +1,5 @@
 rules_version = '2';
-// MAR-ESP SIM UC v10 — Firestore security rules.
+// UCSea v10 — Firestore security rules.
 // Teacher role = e-mail listed in config/instructors { emails: [...] } OR teacher code redeemed (teacherClaims).
 service cloud.firestore {
   match /databases/{database}/documents {

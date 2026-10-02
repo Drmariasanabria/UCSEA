@@ -1,8 +1,8 @@
 {
-  "name": "marespuc-simulator",
+  "name": "ucsea",
   "version": "10.0.0",
   "private": true,
-  "description": "MAR-ESP SIM UC — Maritime English communication simulator (Universidad de Cantabria)",
+  "description": "UCSea — Maritime English communication simulator (Universidad de Cantabria)",
   "type": "module",
   "scripts": {
     "start": "npx http-server . -p 8080 -c-1",

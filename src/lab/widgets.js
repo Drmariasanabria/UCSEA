@@ -137,47 +137,102 @@ export const TELEGRAPH = [
 export function conningPanel(lab, { canHelm, onOrder }) {
   const own = lab.ownShip || {};
   const service = lab.serviceSpeed || own.serviceSpeed || Math.max(12, own.speed || 12);
-  const courseIn = h('input', { type: 'number', min: 0, max: 359, value: Math.round(own.course || 0), style: { fontFamily: 'var(--mono)', fontSize: '1.3rem' } });
-  const speedIn = h('input', { type: 'number', min: 0, max: 25, step: 0.5, value: (own.speed || 0).toFixed(1), style: { fontFamily: 'var(--mono)', fontSize: '1.3rem' } });
+  const courseIn = h('input.mono', { type: 'number', min: 0, max: 359, value: Math.round(own.course || 0), 'aria-label': 'New course' });
+  const speedIn = h('input.mono', { type: 'number', min: 0, max: 25, step: 0.5, value: (own.speed || 0).toFixed(1), 'aria-label': 'Speed' });
   const dis = !canHelm;
-  return h('div.col',
-    h('div.conning',
-      gauge('HDG', `${String(Math.round(own.course || 0)).padStart(3, '0')}°`),
-      gauge('SOG', `${(own.speed || 0).toFixed(1)} kn`),
-      gauge('RUDDER', own.rudderStuck ? `${Math.abs(own.rudderStuck)}° ${own.rudderStuck < 0 ? 'P' : 'S'} ⚠` : 'MID', own.rudderStuck ? true : false),
-      gauge('DEPTH', `${lab.world?.depth ?? '—'} m`, (lab.world?.depth ?? 99) < 12),
-      gauge('LIST', `${own.list || 0}°`, (own.list || 0) > 5),
-      gauge('NAV SIGNAL', own.signal || '—', !!own.signal)),
+  const rudder = own.rudderStuck || 0;
+  return h('div.col.conning-hud',
+    h('div.dials',
+      compassDial(own.course || 0),
+      gauge('SOG', `${(own.speed || 0).toFixed(1)}`, false, ((own.speed || 0) / 25) * 100, 'kn'),
+      rudderDial(rudder)),
+    h('div.readouts',
+      readout('DEPTH', `${lab.world?.depth ?? '—'} m`, (lab.world?.depth ?? 99) < 12),
+      readout('LIST', `${own.list || 0}°`, (own.list || 0) > 5),
+      readout('NAV SIGNAL', own.signal || '—', !!own.signal)),
     h('div.helm',
-      h('div', h('small.dim', 'NEW COURSE (°)'), courseIn, h('div', { style: { height: '6px' } }),
-        h('button.btn.small', { disabled: dis, style: { width: '100%' }, onclick: () => onOrder({ course: ((+courseIn.value % 360) + 360) % 360 }) }, icon('wheel'), 'Gobernar')),
-      h('div', h('small.dim', 'SPEED (kn)'), speedIn, h('div', { style: { height: '6px' } }),
-        h('button.btn.small', { disabled: dis, style: { width: '100%' }, onclick: () => onOrder({ speed: Math.max(0, +speedIn.value) }) }, icon('engine'), 'Ordenar'))),
-    h('div.telegraph', h('small.dim', 'ENGINE TELEGRAPH'),
-      h('div.row', { style: { gap: '4px' } }, TELEGRAPH.map((t) => h('button', {
-        disabled: dis, style: { flex: 1 },
+      h('label.helm-field', h('small', 'NEW COURSE °'), courseIn,
+        h('button.btn.small', { disabled: dis, onclick: () => onOrder({ course: ((+courseIn.value % 360) + 360) % 360 }) }, icon('wheel'), 'Gobernar')),
+      h('label.helm-field', h('small', 'SPEED kn'), speedIn,
+        h('button.btn.small', { disabled: dis, onclick: () => onOrder({ speed: Math.max(0, +speedIn.value) }) }, icon('engine'), 'Ordenar'))),
+    h('div.telegraph', h('small', 'ENGINE TELEGRAPH'),
+      h('div.tele-seg', TELEGRAPH.map((t) => h('button', {
+        disabled: dis,
         onclick: () => onOrder({ speed: t.kn == null ? service : Math.round(service * t.kn * 10) / 10, telegraph: t.es }),
       }, t.id)))),
     dis ? h('p.small', 'Solo el puente (Capitán u oficiales) puede dar órdenes de gobierno y máquina.') : null);
 }
 
-export function gauge(label, value, alarm = false, pct = null) {
-  return h('div.gauge' + (alarm ? '.alarm' : ''), h('small', label), h('b', value), pct != null ? h('div.bar', h('i', { style: { width: `${Math.max(0, Math.min(100, pct))}%` } })) : null);
+const NS = 'http://www.w3.org/2000/svg';
+const svg = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); parent?.appendChild(e); return e; };
+const arcPath = (cx, cy, r, a0, a1) => {
+  const p = (a) => [cx + r * Math.cos(((a - 90) * Math.PI) / 180), cy + r * Math.sin(((a - 90) * Math.PI) / 180)];
+  const [x0, y0] = p(a0), [x1, y1] = p(a1);
+  return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+};
+
+// Arc dial (270°) when pct is given, otherwise a compact glowing readout.
+export function gauge(label, value, alarm = false, pct = null, unit = '') {
+  if (pct == null) return readout(label, value, alarm);
+  const v = Math.max(0, Math.min(100, pct));
+  const s = svg('svg', { viewBox: '0 0 100 100', 'aria-hidden': 'true' });
+  svg('path', { d: arcPath(50, 50, 40, -135, 135), class: 'track' }, s);
+  if (v > 0.5) svg('path', { d: arcPath(50, 50, 40, -135, -135 + 270 * (v / 100)), class: 'val' }, s);
+  for (let i = 0; i <= 10; i++) {
+    const a = ((-135 + i * 27 - 90) * Math.PI) / 180;
+    svg('line', { x1: 50 + 46 * Math.cos(a), y1: 50 + 46 * Math.sin(a), x2: 50 + 49 * Math.cos(a), y2: 50 + 49 * Math.sin(a), class: 'tick' }, s);
+  }
+  return h('div.dial-g' + (alarm ? '.alarm' : ''), { role: 'img', 'aria-label': `${label} ${value} ${unit}` }, s,
+    h('div.dial-v', h('b', value), unit ? h('i', unit) : null), h('small', label));
+}
+
+export function readout(label, value, alarm = false) {
+  return h('div.gauge' + (alarm ? '.alarm' : ''), h('small', label), h('b', value));
+}
+
+function compassDial(course) {
+  const s = svg('svg', { viewBox: '0 0 100 100', 'aria-hidden': 'true' });
+  svg('circle', { cx: 50, cy: 50, r: 44, class: 'track' }, s);
+  const rose = svg('g', { transform: `rotate(${-course} 50 50)` }, s);
+  for (let d = 0; d < 360; d += 10) {
+    const a = ((d - 90) * Math.PI) / 180, big = d % 30 === 0;
+    svg('line', { x1: 50 + (big ? 36 : 39) * Math.cos(a), y1: 50 + (big ? 36 : 39) * Math.sin(a), x2: 50 + 43 * Math.cos(a), y2: 50 + 43 * Math.sin(a), class: big ? 'tick big' : 'tick' }, rose);
+  }
+  for (const [d, t] of [[0, 'N'], [90, 'E'], [180, 'S'], [270, 'W']]) {
+    const a = ((d - 90) * Math.PI) / 180;
+    const tx = svg('text', { x: 50 + 29 * Math.cos(a), y: 50 + 29 * Math.sin(a) + 3, class: d === 0 ? 'card n' : 'card', 'text-anchor': 'middle' }, rose);
+    tx.textContent = t;
+  }
+  svg('path', { d: 'M50 3 L54 11 L46 11 Z', class: 'lubber' }, s);
+  return h('div.dial-g.compass', { role: 'img', 'aria-label': `Heading ${Math.round(course)} degrees` }, s,
+    h('div.dial-v', h('b', `${String(Math.round(course)).padStart(3, '0')}°`)), h('small', 'HDG'));
+}
+
+function rudderDial(angle) {
+  const s = svg('svg', { viewBox: '0 0 100 100', 'aria-hidden': 'true' });
+  svg('path', { d: arcPath(50, 50, 40, -70, 0), class: 'track port' }, s);
+  svg('path', { d: arcPath(50, 50, 40, 0, 70), class: 'track stbd' }, s);
+  const a = Math.max(-35, Math.min(35, angle)) * 2;
+  const r = ((a - 90) * Math.PI) / 180;
+  svg('line', { x1: 50, y1: 50, x2: 50 + 40 * Math.cos(r), y2: 50 + 40 * Math.sin(r), class: 'needle' }, s);
+  svg('circle', { cx: 50, cy: 50, r: 4, class: 'hub' }, s);
+  return h('div.dial-g' + (angle ? '.alarm' : ''), { role: 'img', 'aria-label': `Rudder ${angle || 'midships'}` }, s,
+    h('div.dial-v.low', h('b', angle ? `${Math.abs(angle)}°${angle < 0 ? 'P' : 'S'}` : 'MID')), h('small', 'RUDDER'));
 }
 
 export function enginePanel(lab) {
   const r = engineReadings(lab.engine, lab.ownShip);
   const e = lab.engine || {};
-  return h('div.conning',
-    gauge('M/E RPM', r.rpm.toFixed(0), e.blackout || e.slowdown, r.rpm / 1.2),
-    gauge('L.O. PRESS', `${r.loPressure.toFixed(2)} bar`, r.loPressure < 2.5, r.loPressure / 4 * 100),
-    gauge('JCW TEMP', `${r.cwTemp.toFixed(0)} °C`, r.cwTemp > 90, r.cwTemp),
-    gauge('EXH. GAS', `${r.exhaust.toFixed(0)} °C`, r.exhaust > 450, r.exhaust / 5),
-    gauge('GEN LOAD', `${r.genLoad.toFixed(0)} %`, e.blackout || r.genLoad > 92, r.genLoad),
-    gauge('BILGE', `${r.bilge.toFixed(0)} %`, r.bilge > 50, r.bilge),
-    gauge('FO TEMP', `${r.fuelTemp.toFixed(0)} °C`, false, r.fuelTemp / 1.6),
-    gauge('FIRE DET.', e.fire ? 'FIRE' : 'NORMAL', !!e.fire),
-    gauge('MAIN POWER', e.blackout ? 'BLACKOUT' : 'ON', !!e.blackout));
+  return h('div.dials.engine',
+    gauge('M/E RPM', r.rpm.toFixed(0), e.blackout || e.slowdown, r.rpm / 1.2, 'rpm'),
+    gauge('L.O. PRESS', r.loPressure.toFixed(2), r.loPressure < 2.5, r.loPressure / 4 * 100, 'bar'),
+    gauge('JCW TEMP', r.cwTemp.toFixed(0), r.cwTemp > 90, r.cwTemp, '°C'),
+    gauge('EXH. GAS', r.exhaust.toFixed(0), r.exhaust > 450, r.exhaust / 5, '°C'),
+    gauge('GEN LOAD', r.genLoad.toFixed(0), e.blackout || r.genLoad > 92, r.genLoad, '%'),
+    gauge('BILGE', r.bilge.toFixed(0), r.bilge > 50, r.bilge, '%'),
+    gauge('FO TEMP', r.fuelTemp.toFixed(0), false, r.fuelTemp / 1.6, '°C'),
+    readout('FIRE DET.', e.fire ? 'FIRE' : 'NORMAL', !!e.fire),
+    readout('MAIN POWER', e.blackout ? 'BLACKOUT' : 'ON', !!e.blackout));
 }
 
 export function targetCard(c) {

@@ -4,6 +4,8 @@ import { toRad, norm360 } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 
 const RANGES = [0.75, 1.5, 3, 6, 12, 24];
+const MONO = '"IBM Plex Mono", ui-monospace, monospace';
+const HOLO = (a) => `rgba(110, 215, 255, ${a})`;
 
 export function createRadar(canvas, opts = {}) {
   const o = {
@@ -51,7 +53,7 @@ export function createRadar(canvas, opts = {}) {
   function frame(lab, t) {
     const pic = picture(lab, t);
     const S = sizeCss();
-    const R = S / 2 - 26;
+    const R = S / 2 - 34;
     const centre = o.mode === 'shore'
       ? shoreCentre(pic)
       : { x: pic.own?.px || 0, y: pic.own?.py || 0 };
@@ -97,48 +99,83 @@ export function createRadar(canvas, opts = {}) {
     const cx = S / 2;
     const cy = S / 2;
 
-    // Screen
-    const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, R + 20);
-    bg.addColorStop(0, '#062a2a');
-    bg.addColorStop(1, '#020c10');
+    // Screen: holographic glass disc
+    const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, R + 22);
+    bg.addColorStop(0, 'rgba(18, 70, 110, 0.55)');
+    bg.addColorStop(0.7, 'rgba(6, 26, 46, 0.7)');
+    bg.addColorStop(1, 'rgba(2, 10, 20, 0.85)');
     ctx.fillStyle = bg;
-    ctx.beginPath(); ctx.arc(cx, cy, R + 18, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, R + 20, 0, Math.PI * 2); ctx.fill();
+    // outer halo
+    ctx.save();
+    ctx.shadowColor = HOLO(0.9); ctx.shadowBlur = 18;
+    ctx.strokeStyle = HOLO(0.55); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(cx, cy, R + 1, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    // slowly rotating bezel segments (decorative)
+    ctx.strokeStyle = HOLO(0.35); ctx.lineWidth = 2;
+    const spin = now / 9000;
+    for (let i = 0; i < 6; i++) {
+      const a0 = spin + (i * Math.PI) / 3;
+      ctx.beginPath(); ctx.arc(cx, cy, R + 14, a0, a0 + 0.55); ctx.stroke();
+    }
 
     ctx.save();
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.clip();
 
+    // dot grid
+    ctx.fillStyle = HOLO(0.07);
+    const step = Math.max(14, R / 12);
+    for (let gx = cx - R; gx < cx + R; gx += step) for (let gy = cy - R; gy < cy + R; gy += step) ctx.fillRect(gx, gy, 1.2, 1.2);
+
     // Sea/rain clutter
     const sea = lab.world?.seaState ?? 3;
     const rain = lab.world?.rain;
-    ctx.fillStyle = 'rgba(80,255,180,0.18)';
+    ctx.fillStyle = HOLO(0.22);
     const clutterR = R * Math.min(0.45, 0.06 * sea) * (3 / Math.max(0.75, range));
     for (const sp of speckles) {
       if (Math.random() > 0.5) continue;
       const rr = sp.r * clutterR;
-      ctx.fillRect(cx + Math.cos(sp.a) * rr, cy + Math.sin(sp.a) * rr, 1.6, 1.6);
+      ctx.fillRect(cx + Math.cos(sp.a) * rr, cy + Math.sin(sp.a) * rr, 1.5, 1.5);
     }
     if (rain) {
-      ctx.fillStyle = 'rgba(80,255,180,0.08)';
+      ctx.fillStyle = HOLO(0.1);
       for (let i = 0; i < 120; i++) ctx.fillRect(cx + (Math.random() - 0.5) * R * 1.2 + R * 0.3, cy + (Math.random() - 0.5) * R * 0.8 - R * 0.3, 2, 2);
     }
 
-    // Range rings
-    ctx.strokeStyle = 'rgba(90,255,200,0.18)';
+    // Range rings + spokes
     ctx.lineWidth = 1;
-    for (let i = 1; i <= 4; i++) { ctx.beginPath(); ctx.arc(cx, cy, (R * i) / 4, 0, Math.PI * 2); ctx.stroke(); }
+    for (let i = 1; i <= 4; i++) {
+      ctx.strokeStyle = HOLO(i === 4 ? 0.3 : 0.14);
+      ctx.beginPath(); ctx.arc(cx, cy, (R * i) / 4, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.strokeStyle = HOLO(0.07);
+    for (let d = 0; d < 360; d += 30) {
+      const a = toRad(d + rot - 90);
+      ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * R * 0.08, cy + Math.sin(a) * R * 0.08); ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R); ctx.stroke();
+    }
+    ctx.fillStyle = HOLO(0.45); ctx.font = `10px ${MONO}`; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    for (let i = 1; i <= 3; i++) ctx.fillText(`${+(range * i / 4).toFixed(2)}`, cx + 4, cy - (R * i) / 4 - 3);
 
-    // Sweep (conic trail)
+    // Sweep with afterglow
     const sweepScreen = toRad(sweep - 90);
     if (ctx.createConicGradient) {
-      const g = ctx.createConicGradient(sweepScreen - 0.9, cx, cy);
-      g.addColorStop(0, 'rgba(60,255,190,0)');
-      g.addColorStop(0.14, 'rgba(60,255,190,0.22)');
-      g.addColorStop(0.1433, 'rgba(60,255,190,0)');
+      const trail = 1.25;
+      const g = ctx.createConicGradient(sweepScreen - trail, cx, cy);
+      g.addColorStop(0, HOLO(0));
+      g.addColorStop(trail / (Math.PI * 2) * 0.97, HOLO(0.26));
+      g.addColorStop(trail / (Math.PI * 2), HOLO(0.4));
+      g.addColorStop(trail / (Math.PI * 2) + 0.001, HOLO(0));
       ctx.fillStyle = g;
-      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, sweepScreen - 0.9, sweepScreen + 0.01); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, sweepScreen - trail, sweepScreen + 0.01); ctx.closePath(); ctx.fill();
     }
-    ctx.strokeStyle = 'rgba(120,255,210,0.55)';
+    ctx.save();
+    ctx.shadowColor = HOLO(1); ctx.shadowBlur = 12;
+    const lg = ctx.createLinearGradient(cx, cy, cx + Math.cos(sweepScreen) * R, cy + Math.sin(sweepScreen) * R);
+    lg.addColorStop(0, HOLO(0.1)); lg.addColorStop(1, 'rgba(210, 250, 255, 0.95)');
+    ctx.strokeStyle = lg; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(sweepScreen) * R, cy + Math.sin(sweepScreen) * R); ctx.stroke();
+    ctx.restore();
 
     // Targets
     for (const c of pic.contacts) {
@@ -146,110 +183,143 @@ export function createRadar(canvas, opts = {}) {
       if (Math.hypot(sx - cx, sy - cy) > R) continue;
       const screenAng = norm360(Math.atan2(sy - cy, sx - cx) * 180 / Math.PI + 90);
       const since = norm360(sweep - screenAng);
-      const intensity = Math.max(0.18, 1 - since / 300);
+      const intensity = Math.max(0.25, 1 - since / 300);
       glow.set(c.id, intensity);
-      drawEcho(c, sx, sy, intensity, f, t);
+      drawEcho(c, sx, sy, intensity, f, t, now);
     }
 
     // Own ship
     if (pic.own) {
       const { sx, sy } = toScreen(pic.own.px, pic.own.py);
       const hd = toRad((pic.own.course || 0) + rot - 90);
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.2;
       if (o.mode === 'ship') {
-        ctx.setLineDash([6, 5]);
+        const hg = ctx.createLinearGradient(sx, sy, sx + Math.cos(hd) * R, sy + Math.sin(hd) * R);
+        hg.addColorStop(0, 'rgba(255,255,255,0.75)'); hg.addColorStop(1, 'rgba(255,255,255,0.05)');
+        ctx.strokeStyle = hg; ctx.lineWidth = 1.2; ctx.setLineDash([6, 6]);
         ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + Math.cos(hd) * R, sy + Math.sin(hd) * R); ctx.stroke();
         ctx.setLineDash([]);
       }
-      drawShipShape(sx, sy, hd, o.mode === 'shore' ? '#ffd166' : '#ffffff', o.mode === 'shore' ? 7 : 5);
+      ctx.save(); ctx.shadowColor = o.mode === 'shore' ? '#ffd36b' : '#ffffff'; ctx.shadowBlur = 14;
+      drawShipShape(sx, sy, hd, o.mode === 'shore' ? '#ffd36b' : '#ffffff', o.mode === 'shore' ? 7 : 5.5);
+      ctx.restore();
       // 6-minute vector
       const v = (pic.own.speed || 0) * 0.1 * f.k;
-      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.6;
       ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + Math.cos(hd) * v, sy + Math.sin(hd) * v); ctx.stroke();
-      if (o.mode === 'shore') label(sx + 9, sy - 9, lab.ownShip.name, '#ffd166');
+      if (o.mode === 'shore') label(sx + 12, sy - 12, lab.ownShip.name, '#ffd36b');
     }
 
     // EBL / VRM
+    ctx.lineWidth = 1.3;
     if (ebl) {
       const a = toRad(ebl.bearing + rot - 90);
-      ctx.strokeStyle = '#ffcf5a'; ctx.setLineDash([3, 4]);
+      ctx.strokeStyle = '#ffd36b'; ctx.setLineDash([3, 4]);
       ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R); ctx.stroke(); ctx.setLineDash([]);
     }
     if (vrm) {
-      ctx.strokeStyle = '#ffcf5a'; ctx.setLineDash([2, 5]);
+      ctx.strokeStyle = '#ffd36b'; ctx.setLineDash([2, 5]);
       ctx.beginPath(); ctx.arc(cx, cy, vrm.range * f.k, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
     }
     ctx.restore();
 
     // Bearing scale
-    ctx.strokeStyle = 'rgba(120,255,210,0.5)';
-    ctx.fillStyle = 'rgba(160,255,220,0.8)';
-    ctx.font = '11px "JetBrains Mono", monospace';
+    ctx.font = `10.5px ${MONO}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     for (let d = 0; d < 360; d += 5) {
       const a = toRad(d + rot - 90);
-      const r1 = R + (d % 30 === 0 ? 0 : d % 10 === 0 ? 4 : 7);
-      ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); ctx.lineTo(cx + Math.cos(a) * (R + 10), cy + Math.sin(a) * (R + 10)); ctx.stroke();
-      if (d % 30 === 0) ctx.fillText(String(d).padStart(3, '0'), cx + Math.cos(a) * (R + 19), cy + Math.sin(a) * (R + 19));
+      const major = d % 30 === 0;
+      const r1 = R + (major ? 1 : d % 10 === 0 ? 4 : 6);
+      ctx.strokeStyle = HOLO(major ? 0.85 : 0.35);
+      ctx.lineWidth = major ? 1.5 : 1;
+      ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); ctx.lineTo(cx + Math.cos(a) * (R + 8), cy + Math.sin(a) * (R + 8)); ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(200, 240, 255, 0.85)';
+    for (let d = 0; d < 360; d += 30) {
+      const a = toRad(d + rot - 90);
+      ctx.fillText(String(d).padStart(3, '0'), cx + Math.cos(a) * (R + 22), cy + Math.sin(a) * (R + 22));
     }
 
-    // HUD text
-    ctx.textAlign = 'left';
-    ctx.fillStyle = 'rgba(160,255,220,0.9)';
-    ctx.font = '12px "JetBrains Mono", monospace';
-    ctx.fillText(`${range} NM  ${o.mode === 'shore' ? 'NORTH UP · VTS' : orientation === 'head' ? 'HEAD UP' : 'NORTH UP'}`, 8, 14);
-    ctx.textAlign = 'right';
-    if (pic.own && o.mode === 'ship') ctx.fillText(`HDG ${String(Math.round(pic.own.course)).padStart(3, '0')}°  SPD ${pic.own.speed.toFixed(1)} kn`, S - 8, 14);
+    // HUD pills
+    const modeTxt = o.mode === 'shore' ? 'N-UP · VTS' : orientation === 'head' ? 'H-UP' : 'N-UP';
+    if (S < 420) pill(4, 4, `${range} NM · ${modeTxt}`, '#bfefff', 'left');
+    else {
+      pill(6, 6, `${range} NM · ${modeTxt}`, '#bfefff', 'left');
+      if (pic.own && o.mode === 'ship') pill(S - 6, 6, `HDG ${String(Math.round(pic.own.course)).padStart(3, '0')}° · ${pic.own.speed.toFixed(1)} kn`, '#bfefff', 'right');
+    }
     if (mouse) {
       const p = f.fromScreen(mouse.x, mouse.y);
       const dx = p.x - (pic.own?.px || 0);
       const dy = p.y - (pic.own?.py || 0);
       const brg = norm360(Math.atan2(dx, dy) * 180 / Math.PI);
       const rng = Math.hypot(dx, dy);
-      ctx.fillText(`CURSOR ${String(Math.round(brg)).padStart(3, '0')}° ${rng.toFixed(2)} NM`, S - 8, S - 10);
+      pill(S - 6, S - 30, `⌖ ${String(Math.round(brg)).padStart(3, '0')}° · ${rng.toFixed(2)} NM`, '#bfefff', 'right');
       if (tool === 'ebl') ebl = { bearing: brg };
       if (tool === 'vrm') vrm = { range: rng };
     }
-    ctx.textAlign = 'left';
-    if (ebl) ctx.fillText(`EBL ${String(Math.round(ebl.bearing)).padStart(3, '0')}°`, 8, S - 26);
-    if (vrm) ctx.fillText(`VRM ${vrm.range.toFixed(2)} NM`, 8, S - 10);
+    if (ebl) pill(6, S - 56, `EBL ${String(Math.round(ebl.bearing)).padStart(3, '0')}°`, '#ffd36b', 'left');
+    if (vrm) pill(6, S - 30, `VRM ${vrm.range.toFixed(2)} NM`, '#ffd36b', 'left');
 
     raf = requestAnimationFrame(draw);
   }
 
-  function drawEcho(c, sx, sy, intensity, f, t) {
+  function drawEcho(c, sx, sy, intensity, f, t, now) {
     const isSel = c.id === selectedId;
     const isAcq = acquired.has(c.id) || o.mode === 'shore';
-    // raw echo blob
-    ctx.fillStyle = `rgba(110,255,170,${0.85 * intensity})`;
-    const sizePx = c.tow ? 4 : c.type?.match(/tanker|bulk|container|car|ro-ro/i) ? 4.5 : 3;
-    ctx.beginPath(); ctx.ellipse(sx, sy, sizePx, sizePx * 0.75, 0, 0, Math.PI * 2); ctx.fill();
+    const danger = c.cpa < 0.5 && c.tcpa > 0 && c.tcpa < 30;
+    // glowing echo
+    const sizePx = c.tow ? 4.5 : c.type?.match(/tanker|bulk|container|car|ro-ro/i) ? 5 : 3.5;
+    const rg = ctx.createRadialGradient(sx, sy, 0, sx, sy, sizePx * 3.2);
+    rg.addColorStop(0, `rgba(220, 250, 255, ${0.95 * intensity})`);
+    rg.addColorStop(0.35, HOLO(0.6 * intensity));
+    rg.addColorStop(1, HOLO(0));
+    ctx.fillStyle = rg;
+    ctx.beginPath(); ctx.arc(sx, sy, sizePx * 3.2, 0, Math.PI * 2); ctx.fill();
     if (c.tow) {
       // barge 250 m astern of the tug
       const a = toRad(c.course + f.rot + 90);
       const len = 0.135 * f.k;
-      ctx.strokeStyle = `rgba(110,255,170,${0.35 * intensity})`;
+      ctx.strokeStyle = HOLO(0.45 * intensity); ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + Math.cos(a) * len, sy + Math.sin(a) * len); ctx.stroke();
-      ctx.fillStyle = `rgba(110,255,170,${0.8 * intensity})`;
+      ctx.fillStyle = HOLO(0.85 * intensity);
       ctx.fillRect(sx + Math.cos(a) * len - 3.5, sy + Math.sin(a) * len - 3.5, 7, 7);
     }
     const hd = toRad(c.course + f.rot - 90);
-    if (c.ais) drawShipShape(sx, sy, hd, isSel ? '#ffd166' : '#5ad1ff', 6, true);
+    if (c.ais) drawShipShape(sx, sy, hd, isSel ? '#ffd36b' : '#7fe0ff', 6.5, true);
+    if (danger) {
+      const pulse = 0.5 + 0.5 * Math.sin(now / 180);
+      ctx.save(); ctx.shadowColor = '#ff5d6c'; ctx.shadowBlur = 16;
+      ctx.strokeStyle = `rgba(255, 93, 108, ${0.5 + 0.5 * pulse})`; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.arc(sx, sy, 13 + pulse * 5, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
     if (isAcq) {
-      ctx.strokeStyle = c.cpa < 0.5 && c.tcpa > 0 && c.tcpa < 30 ? '#ff5d5d' : '#5ad1ff';
-      ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.arc(sx, sy, 9, 0, Math.PI * 2); ctx.stroke();
+      const col = danger ? '#ff5d6c' : '#7fe0ff';
+      ctx.strokeStyle = col; ctx.lineWidth = 1.2;
+      ctx.setLineDash([4, 3]); ctx.lineDashOffset = -now / 60;
+      ctx.beginPath(); ctx.arc(sx, sy, 10, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]); ctx.lineDashOffset = 0;
       const v = (c.speed || 0) * 0.1 * f.k;
+      const vg = ctx.createLinearGradient(sx, sy, sx + Math.cos(hd) * v, sy + Math.sin(hd) * v);
+      vg.addColorStop(0, col); vg.addColorStop(1, 'rgba(127, 224, 255, 0.15)');
+      ctx.strokeStyle = vg; ctx.lineWidth = 1.6;
       ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + Math.cos(hd) * v, sy + Math.sin(hd) * v); ctx.stroke();
     }
     if (isSel || (o.mode === 'shore' && c.ais)) {
-      label(sx + 11, sy - 10, c.ais ? c.name : 'NO AIS', isSel ? '#ffd166' : '#9fe8ff');
+      const txt = c.ais ? c.name : 'NO AIS';
+      label(sx + 14, sy - 14, isSel && c.cpa != null ? `${txt} · CPA ${c.cpa.toFixed(1)}` : txt, isSel ? '#ffd36b' : '#bfefff');
     }
     if (isSel) {
-      ctx.strokeStyle = '#ffd166';
-      ctx.strokeRect(sx - 12, sy - 12, 24, 24);
+      // animated corner brackets
+      const r = 15 + Math.sin(now / 250) * 1.5, l = 6;
+      ctx.save(); ctx.shadowColor = '#ffd36b'; ctx.shadowBlur = 10;
+      ctx.strokeStyle = '#ffd36b'; ctx.lineWidth = 1.6;
+      for (const [dx, dy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+        ctx.beginPath();
+        ctx.moveTo(sx + dx * r, sy + dy * (r - l)); ctx.lineTo(sx + dx * r, sy + dy * r); ctx.lineTo(sx + dx * (r - l), sy + dy * r);
+        ctx.stroke();
+      }
+      ctx.restore();
     }
   }
 
@@ -258,26 +328,38 @@ export function createRadar(canvas, opts = {}) {
     ctx.translate(x, y);
     ctx.rotate(a + Math.PI / 2);
     ctx.beginPath();
-    ctx.moveTo(0, -s * 1.5); ctx.lineTo(s * 0.8, s); ctx.lineTo(-s * 0.8, s); ctx.closePath();
+    ctx.moveTo(0, -s * 1.5); ctx.lineTo(s * 0.8, s); ctx.lineTo(0, s * 0.55); ctx.lineTo(-s * 0.8, s); ctx.closePath();
     ctx.strokeStyle = color;
     ctx.lineWidth = 1.4;
     if (outline) ctx.stroke(); else { ctx.fillStyle = color; ctx.fill(); }
     ctx.restore();
   }
 
-  function label(x, y, text, color) {
-    ctx.font = '11px "JetBrains Mono", monospace';
-    ctx.fillStyle = color;
-    ctx.textAlign = 'left';
-    ctx.fillText(text, x, y);
+  // Rounded glass tag for text on the scope.
+  function pill(x, y, text, color, align = 'left') {
+    ctx.font = `600 10.5px ${MONO}`;
+    const w = ctx.measureText(text).width + 16, hgt = 20;
+    const x0 = align === 'right' ? x - w : x;
+    ctx.fillStyle = 'rgba(4, 18, 34, 0.72)';
+    ctx.strokeStyle = 'rgba(127, 224, 255, 0.28)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x0, y, w, hgt, 10); else ctx.rect(x0, y, w, hgt);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = color; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, x0 + 8, y + hgt / 2 + 0.5);
   }
+  const label = (x, y, text, color) => pill(x, y - 10, text, color);
 
   function drawIdle(S) {
-    ctx.fillStyle = '#031014';
+    const g = ctx.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+    g.addColorStop(0, 'rgba(18, 70, 110, 0.5)'); g.addColorStop(1, 'rgba(2, 10, 20, 0.85)');
+    ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(S / 2, S / 2, S / 2 - 10, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = 'rgba(120,255,210,0.6)';
-    ctx.font = '14px "JetBrains Mono", monospace';
-    ctx.textAlign = 'center';
+    ctx.strokeStyle = HOLO(0.4); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(S / 2, S / 2, S / 2 - 10, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = HOLO(0.8);
+    ctx.font = `600 13px ${MONO}`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('STAND BY', S / 2, S / 2);
   }
 

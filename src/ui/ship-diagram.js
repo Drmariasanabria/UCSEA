@@ -24,25 +24,35 @@ export function shipDiagram({ onPick, marks = [], interactive = true } = {}) {
   svg.setAttribute('aria-label', 'General cargo ship: side profile and plan view');
   const el = (tag, attrs, parent = svg) => { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); parent.appendChild(e); return e; };
 
+  // holographic defs: glow + hull gradient
+  const gid = `sd${Math.random().toString(36).slice(2, 7)}`;
+  const defs = el('defs', {});
+  const flt = el('filter', { id: `${gid}g`, x: '-10%', y: '-30%', width: '120%', height: '160%' }, defs);
+  el('feGaussianBlur', { stdDeviation: 2.4, result: 'b' }, flt);
+  const mg = el('feMerge', {}, flt); el('feMergeNode', { in: 'b' }, mg); el('feMergeNode', { in: 'SourceGraphic' }, mg);
+  const hg = el('linearGradient', { id: `${gid}h`, x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+  el('stop', { offset: 0, 'stop-color': '#3fc4ff', 'stop-opacity': 0.28 }, hg); el('stop', { offset: 1, 'stop-color': '#3fc4ff', 'stop-opacity': 0.04 }, hg);
+  const HULL = `url(#${gid}h)`, GLOW = `url(#${gid}g)`;
   // sea
-  el('rect', { x: 0, y: 150, width: 1000, height: 30, fill: 'rgba(30,110,170,0.25)' });
+  el('rect', { x: 0, y: 150, width: 1000, height: 30, fill: 'rgba(63,196,255,0.12)' });
+  for (let x = 0; x < 1000; x += 40) el('path', { d: `M${x} 158 q10 -4 20 0 t20 0`, fill: 'none', stroke: 'rgba(127,224,255,0.25)' });
   // hull side
-  el('path', { d: `M40 ${DECK_Y} L960 ${DECK_Y} L985 ${DECK_Y - 22} L940 ${KEEL_Y} L60 ${KEEL_Y} L30 ${DECK_Y + 25} Z`, fill: '#0c2a44', stroke: '#5ad1ff', 'stroke-width': 2 });
+  el('path', { d: `M40 ${DECK_Y} L960 ${DECK_Y} L985 ${DECK_Y - 22} L940 ${KEEL_Y} L60 ${KEEL_Y} L30 ${DECK_Y + 25} Z`, fill: HULL, stroke: '#7fe0ff', 'stroke-width': 2, filter: GLOW });
   // superstructure + bridge + funnel
-  el('rect', { x: 255, y: SIDE_TOP + 5, width: 70, height: DECK_Y - SIDE_TOP - 5, fill: '#123b5e', stroke: '#5ad1ff' });
-  el('rect', { x: 248, y: SIDE_TOP - 6, width: 84, height: 12, fill: '#18507c', stroke: '#5ad1ff' });
-  el('rect', { x: 335, y: SIDE_TOP + 20, width: 22, height: DECK_Y - SIDE_TOP - 20, fill: '#0f3352', stroke: '#5ad1ff' });
+  el('rect', { x: 255, y: SIDE_TOP + 5, width: 70, height: DECK_Y - SIDE_TOP - 5, fill: 'rgba(63,196,255,0.16)', stroke: '#7fe0ff', filter: GLOW });
+  el('rect', { x: 248, y: SIDE_TOP - 6, width: 84, height: 12, fill: 'rgba(63,196,255,0.26)', stroke: '#7fe0ff', filter: GLOW });
+  el('rect', { x: 335, y: SIDE_TOP + 20, width: 22, height: DECK_Y - SIDE_TOP - 20, fill: 'rgba(63,196,255,0.12)', stroke: '#7fe0ff', filter: GLOW });
   // forecastle
-  el('path', { d: `M850 ${DECK_Y} L850 ${DECK_Y - 18} L975 ${DECK_Y - 22} L960 ${DECK_Y} Z`, fill: '#123b5e', stroke: '#5ad1ff' });
+  el('path', { d: `M850 ${DECK_Y} L850 ${DECK_Y - 18} L975 ${DECK_Y - 22} L960 ${DECK_Y} Z`, fill: 'rgba(63,196,255,0.16)', stroke: '#7fe0ff', filter: GLOW });
   // containers on hatch covers
   for (const z of ZONES.filter((q) => q.hold)) for (let i = 0; i < 5; i++) el('rect', { x: z.x + 8 + i * 29, y: DECK_Y - 26, width: 26, height: 24, fill: 'none', stroke: 'rgba(90,209,255,0.35)', 'stroke-dasharray': '3 3' });
   // bulkheads & double bottom
   for (const z of ZONES) el('line', { x1: z.x, y1: DECK_Y, x2: z.x, y2: KEEL_Y - 6, stroke: 'rgba(90,209,255,0.5)' });
   el('line', { x1: 60, y1: KEEL_Y - 14, x2: 940, y2: KEEL_Y - 14, stroke: 'rgba(90,209,255,0.35)', 'stroke-dasharray': '6 4' });
   // plan view
-  el('path', { d: `M40 ${PLAN_TOP + 20} L880 ${PLAN_TOP} Q975 ${PLAN_MID} 880 ${PLAN_BOT} L40 ${PLAN_BOT - 20} Z`, fill: '#0c2a44', stroke: '#5ad1ff', 'stroke-width': 2 });
+  el('path', { d: `M40 ${PLAN_TOP + 20} L880 ${PLAN_TOP} Q975 ${PLAN_MID} 880 ${PLAN_BOT} L40 ${PLAN_BOT - 20} Z`, fill: HULL, stroke: '#7fe0ff', 'stroke-width': 2, filter: GLOW });
   el('line', { x1: 40, y1: PLAN_MID, x2: 960, y2: PLAN_MID, stroke: 'rgba(255,207,90,0.5)', 'stroke-dasharray': '8 6' });
-  const txt = (x, y, s, size = 13, fill = '#cfeaff', anchor = 'middle') => { const t = el('text', { x, y, 'font-size': size, fill, 'text-anchor': anchor, 'font-family': 'JetBrains Mono, monospace', 'pointer-events': 'none' }); t.textContent = s; return t; };
+  const txt = (x, y, s, size = 13, fill = '#cfeaff', anchor = 'middle') => { const t = el('text', { x, y, 'font-size': size, fill, 'text-anchor': anchor, 'font-family': 'IBM Plex Mono, monospace', 'pointer-events': 'none' }); t.textContent = s; return t; };
   txt(500, PLAN_MID + 4, 'CENTRELINE', 11, 'rgba(255,207,90,0.8)');
   txt(30, PLAN_TOP + 8, 'PORT', 12, '#ff8a8a', 'start');
   txt(30, PLAN_BOT + 12, 'STARBOARD', 12, '#7cf29c', 'start');
