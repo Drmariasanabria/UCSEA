@@ -117,7 +117,7 @@ export default function render(root, { user, query }) {
       h('div.row.between', { style: { marginTop: '6px' } },
         h('span.small', `${t.author || '—'}${t.updatedAt ? ' · ' + fmtDate(t.updatedAt) : ''}`),
         h('div.row', { style: { gap: '4px' } },
-          h('button.icon-btn', { title: 'Pronunciar', onclick: () => speak(t.term + (t.example ? '. ' + t.example : ''), { radio: false }) }, icon('sound')),
+          h('button.icon-btn', { title: 'Pronunciar', onclick: () => speak(t.term + (t.example ? '. ' + t.example : ''), { radio: false, ai: true }) }, icon('sound')),
           h('button.btn.small' + (voted ? '.primary' : ''), { title: 'Útil', onclick: () => vote(t) }, '▲ ' + (t.votes || 0)),
           mine && !compact ? h('button.icon-btn', { title: 'Editar', onclick: () => editTerm(t) }, icon('edit')) : null,
           compact ? h('button.icon-btn', { title: 'Editar', onclick: () => editTerm(t) }, icon('edit')) : null,
@@ -187,7 +187,7 @@ export default function render(root, { user, query }) {
         h('div.row', { style: { justifyContent: 'center', marginTop: '14px' } },
           h('button.btn', { onclick: () => { flipped = false; i++; draw(); } }, 'Repasar luego'),
           h('button.btn.success', { onclick: () => { known++; flipped = false; deck.splice(i % deck.length, 1); sfx.success(); draw(); } }, `Lo sé (${known})`),
-          h('button.icon-btn', { onclick: () => speak(t.term, { radio: false }) }, icon('sound'))));
+          h('button.icon-btn', { onclick: () => speak(t.term, { radio: false, ai: true }) }, icon('sound'))));
     };
     draw();
     mount(container, box);

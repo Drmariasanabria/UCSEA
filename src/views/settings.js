@@ -5,7 +5,7 @@ import { db, setPreferredMode } from '../backend/index.js';
 import { CAREERS, rolesFor, careerById } from '../data/careers.js';
 import { QUESTIONNAIRE, OPEN_QUESTIONS, CONSENT_TEXT } from '../data/research.js';
 import { savePrefs } from '../main.js';
-import { englishVoices, speak, voiceScore, stopSpeaking } from '../core/speech.js';
+import { englishVoices, speak, voiceScore, stopSpeaking, lastVoiceEngine } from '../core/speech.js';
 import { sfx } from '../core/audio.js';
 
 export default async function render(root, { user }) {
@@ -49,13 +49,25 @@ export default async function render(root, { user }) {
     const list = englishVoices().filter((v) => voiceScore(v) > -100);
     const cur = prefs.voice || '';
     const best = list[0];
+    const engineNote = h('span.small');
+    const test = async (text, persona) => {
+      stopSpeaking();
+      engineNote.textContent = prefs.aiVoice !== false ? 'Generando voz IA… (unos segundos)' : '';
+      await speak(text, { persona, ai: true });
+      engineNote.textContent = lastVoiceEngine() === 'ai' ? '✓ Has escuchado la voz IA (Gemini).' : 'Has escuchado la voz del navegador (la voz IA no estaba disponible o está desactivada).';
+    };
     mount(voiceBox,
-      field('Voz principal (narrador y estaciones)', select([{ value: '', label: best ? `Automática · ${best.name} (${stars(best)})` : 'Automática' }, ...list.slice(0, 24).map((v) => ({ value: v.name, label: `${v.name} · ${v.lang} · ${stars(v)}` }))], cur, (v) => { savePrefs({ voice: v || null }); prefs.voice = v || null; stopSpeaking(); speak(SAMPLE, { persona: 'default' }); })),
-      h('div.row', h('button.btn.small', { onclick: () => { stopSpeaking(); speak(SAMPLE, { persona: 'default' }); } }, icon('sound'), 'Probar voz'),
-        h('button.btn.small.ghost', { onclick: () => { stopSpeaking(); speak('MAYDAY, MAYDAY, MAYDAY. This is Nordic Kestrel. Fire in the engine room. Over.', { persona: 'mrcc' }); } }, 'Otra estación')),
-      h('p.small', list.length
-        ? (voiceScore(list[0]) >= 100 ? 'Tu navegador tiene voces naturales: se usan automáticamente.' : 'Para voces mucho más naturales (y gratis), abre UCSea en Microsoft Edge: incluye voces neuronales «Natural». En Chrome se usan las voces de Google; en Safari, instala voces «Mejoradas/Premium» en Ajustes del sistema → Accesibilidad → Contenido leído.')
-        : 'Cargando voces del navegador…'));
+      h('label.check', h('input', { type: 'checkbox', checked: prefs.aiVoice !== false, onchange: (e) => { savePrefs({ aiVoice: e.target.checked }); prefs.aiVoice = e.target.checked; } }),
+        h('span', h('b', 'Voz IA natural (Gemini)'), ' — entiende el contexto (tono de VTS, Mayday, práctico…) y suena con efecto de radio VHF. Gratuita con cuota diaria limitada; si falla o se agota, se usan automáticamente las voces del navegador.')),
+      h('div.tip-edge', icon('sparkle'), h('div',
+        h('b', 'Recomendado: usa Microsoft Edge.'),
+        h('span', ' Edge incluye gratis voces neuronales «Natural» que suenan casi humanas; UCSea las elige solas cuando la voz IA no está disponible. En Chrome se usan las voces de Google; en Safari puedes instalar voces «Mejoradas/Premium» en Ajustes del sistema → Accesibilidad → Contenido leído.'))),
+      field('Voz del navegador (respaldo)', select([{ value: '', label: best ? `Automática · ${best.name} (${stars(best)})` : 'Automática' }, ...list.slice(0, 24).map((v) => ({ value: v.name, label: `${v.name} · ${v.lang} · ${stars(v)}` }))], cur, (v) => { savePrefs({ voice: v || null }); prefs.voice = v || null; stopSpeaking(); speak(SAMPLE, { persona: 'default' }); })),
+      h('div.row', h('button.btn.small', { onclick: () => test(SAMPLE, 'vts') }, icon('sound'), 'Probar voz (VTS)'),
+        h('button.btn.small.ghost', { onclick: () => test('MAYDAY, MAYDAY, MAYDAY. This is Nordic Kestrel. Fire in the engine room. Eighteen persons on board. Over.', 'distressed') }, 'Probar un Mayday'),
+        h('button.btn.small.ghost', { onclick: () => { stopSpeaking(); speak(SAMPLE, { persona: 'default' }); } }, 'Solo voz del navegador')),
+      engineNote,
+      h('p.small', list.length ? `${list.length} voces del navegador disponibles · mejor: ${best.name} (${stars(best)}).` : 'Cargando voces del navegador…'));
   }
   drawVoices();
   if ('speechSynthesis' in window) window.speechSynthesis.addEventListener?.('voiceschanged', drawVoices);

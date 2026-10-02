@@ -150,7 +150,7 @@ const RENDERERS = {
       h('h3', p.title), h('p', p.text), heel,
       h('div.objectives', p.objectives.map((o) => h('span.objective', icon('target'), o))),
       h('div', h('button.btn.primary.big', { onclick: () => { sfx.boot(); next(null); } }, icon('play'), 'Tomar la guardia'))));
-    speak(p.text, { persona: 'narrator', radio: false });
+    speak(p.text, { persona: 'narrator', radio: false, ai: true });
     return () => stopAlarm('heel');
   },
 
@@ -162,7 +162,7 @@ const RENDERERS = {
       plays++;
       playBtn.disabled = true;
       sfx.squelch();
-      await speak(p.script, { persona: 'agent-laura', rate: 1.05 });
+      await speak(p.script, { persona: 'agent-laura', rate: 1.05, ai: true });
       playBtn.disabled = plays >= p.maxPlays;
       count.textContent = `Reproducciones: ${plays}/${p.maxPlays}`;
     } }, icon('sound'), 'Atender la llamada');
@@ -214,7 +214,7 @@ const RENDERERS = {
       const reply = scriptedReply(p.npcRules, text) || localReply({ lab, personaKey: p.persona === 'barge' ? 'port' : p.persona, text, channel: p.channel, history: [], events: [], picture: picture(lab) }).text;
       add(npcName, reply, false);
       history.push({ mine: false, text: reply });
-      speak(reply, { persona: p.persona });
+      speak(reply, { persona: p.persona, ai: true });
       if (met.size === p.criteria.length || turns >= (p.maxTurns || 4)) finishBtn.classList.add('success');
     };
     ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
@@ -224,7 +224,7 @@ const RENDERERS = {
         h('div.composer', ta, h('div.col', { style: { alignItems: 'center', gap: '6px' } }, voiceInput(ta), h('button.btn.primary.small', { onclick: send }, icon('send'), 'TX')))),
       h('div.panel', h('h4', 'Lo que debe tener tu comunicación'), checks, h('hr'), finishBtn)));
     draw('');
-    if (p.npcOpen) setTimeout(() => { add(npcName, p.npcOpen, false); speak(p.npcOpen, { persona: p.persona }); sfx.radioIn(); }, 500);
+    if (p.npcOpen) setTimeout(() => { add(npcName, p.npcOpen, false); speak(p.npcOpen, { persona: p.persona, ai: true }); sfx.radioIn(); }, 500);
     return () => stopSpeaking();
   },
 
@@ -469,9 +469,9 @@ const RENDERERS = {
       mount(fb, h('div.task', h('b', ok ? '✓ Correct' : `✗ They are at: ${describe(round.zone, round.side)}`),
         h('button.btn.primary', { onclick: () => { r++; if (r >= p.rounds.length) next(pts / p.rounds.length); else play(); } }, 'Siguiente')));
     } });
-    const say = h('button.btn.primary', { onclick: () => speak(p.rounds[r].say, { persona: 'party' }) }, icon('sound'), 'Escuchar al jefe de equipo');
+    const say = h('button.btn.primary', { onclick: () => speak(p.rounds[r].say, { persona: 'party', ai: true }) }, icon('sound'), 'Escuchar al jefe de equipo');
     const transcript = h('p.small');
-    const play = () => { answered = false; mount(fb); transcript.textContent = p.rounds[r].say; speak(p.rounds[r].say, { persona: 'party' }); };
+    const play = () => { answered = false; mount(fb); transcript.textContent = p.rounds[r].say; speak(p.rounds[r].say, { persona: 'party', ai: true }); };
     mount(el, h('div.mplayer', h('div.scene', diag), h('div.panel', header(p), h('p', p.task), say, h('details', h('summary.small', 'Mostrar texto (accesibilidad)'), transcript), fb)));
     setTimeout(play, 400);
     return () => stopSpeaking();

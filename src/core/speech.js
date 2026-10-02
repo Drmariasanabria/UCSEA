@@ -1,5 +1,6 @@
 // Speech: push-to-talk recognition (Web Speech API), radio-style TTS, and local recording.
-import { sfx } from './audio.js';
+import { sfx, playVoiceBuffer } from './audio.js';
+import { synthesize, aiVoiceEnabled } from './ai-voice.js';
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 export const sttSupported = () => !!SR;
@@ -159,7 +160,7 @@ const digits = (s) => s.split('').map((c) => (/\d/.test(c) ? DIG[+c] : c)).join(
 const SPELL = ['VTS', 'MRCC', 'RCC', 'CPA', 'TCPA', 'AIS', 'ETA', 'ETD', 'OOW', 'VHF', 'UHF', 'MF', 'HF', 'DSC', 'GMDSS', 'SAR', 'MOB', 'POB', 'PSC', 'ISM', 'SMS', 'DPA', 'COG', 'SOG', 'HDG', 'UKC', 'GM', 'ECR', 'MCC', 'LT', 'UTC', 'TSS', 'DST', 'IMO', 'MV', 'MT', 'ROV', 'ECDIS', 'GNSS', 'GPS', 'SART', 'LNG', 'LPG', 'ISPS', 'MSDS', 'SDS', 'PPE', 'CO2', 'NO'];
 const SPELL_SET = new Set(SPELL.filter((x) => x !== 'NO' && x !== 'ECDIS'));
 
-export function radioText(raw = '') {
+export function radioText(raw = '', { spell = true } = {}) {
   let t = ` ${raw} `;
   t = t.replace(/[⚑⚠✓•·]/g, ' ').replace(/\s[—–-]\s/g, ', ').replace(/\s+/g, ' ');
   // Spanish severity labels from system messages are not read out
@@ -183,8 +184,10 @@ export function radioText(raw = '') {
   // decimals -> "two decimal four"
   t = t.replace(/\b(\d+)\.(\d+)\b/g, (_, a, b) => `${a.length > 1 ? digits(a) : DIG[+a]} decimal ${digits(b)}`);
   // acronyms spelt letter by letter; long ALL-CAPS words (SMCP markers) read as words
-  t = t.replace(/\b[A-Z][A-Z0-9]{1,5}\b/g, (w) => (SPELL_SET.has(w) ? w.split('').join(' ') : w));
-  t = t.replace(/\b[A-Z]{5,}\b/g, (w) => (w === 'ECDIS' ? 'Ek-dis' : w[0] + w.slice(1).toLowerCase()));
+  if (spell) {
+    t = t.replace(/\b[A-Z][A-Z0-9]{1,5}\b/g, (w) => (SPELL_SET.has(w) ? w.split('').join(' ') : w));
+    t = t.replace(/\b[A-Z]{5,}\b/g, (w) => (w === 'ECDIS' ? 'Ek-dis' : w[0] + w.slice(1).toLowerCase()));
+  }
   return t.replace(/\s+/g, ' ').replace(/\s([,.?!])/g, '$1').replace(/^[,\s]+/, '').trim();
 }
 
@@ -193,13 +196,46 @@ const sentences = (t) => t.match(/[^.!?]+[.!?]*/g)?.map((x) => x.trim()).filter(
 
 let speaking = Promise.resolve();
 let generation = 0;
-export function speak(text, { persona = 'default', rate = 0.98, pitch = 1, radio = true } = {}) {
-  if (!ttsSupported() || !text) return Promise.resolve();
+let current = null; // AI playback handle
+let lastEngine = 'browser';
+export const lastVoiceEngine = () => lastEngine;
+
+/**
+ * Speak a message. With `ai: true` the context-aware AI voice (Gemini TTS) is tried first and the
+ * browser voices take over automatically if it is off, slow, failing or out of free quota.
+ */
+export function speak(text, { persona = 'default', rate = 0.98, pitch = 1, radio = true, ai = false } = {}) {
+  if (!text) return Promise.resolve();
   const gen = generation;
+  // start the AI request right away (in parallel with anything still playing)
+  const aiJob = ai && aiVoiceEnabled() ? synthesize(radioText(text, { spell: false }), { persona, radio }).catch(() => null) : null;
+  speaking = speaking.then(async () => {
+    if (gen !== generation) return;
+    if (aiJob) {
+      const buf = await aiJob;
+      if (gen !== generation) return;
+      if (buf) {
+        lastEngine = 'ai';
+        if (radio) sfx.radioIn();
+        await new Promise((r) => setTimeout(r, radio ? 160 : 0));
+        current = playVoiceBuffer(buf, { radio });
+        await current.done;
+        current = null;
+        if (radio && gen === generation) sfx.radioOut();
+        return;
+      }
+    }
+    lastEngine = 'browser';
+    await browserSpeak(text, { persona, rate, pitch, radio, gen });
+  });
+  return speaking;
+}
+
+function browserSpeak(text, { persona, rate, pitch, radio, gen }) {
+  if (!ttsSupported()) return Promise.resolve();
   const v = voiceFor(persona);
   const parts = sentences(radioText(text));
-  speaking = speaking.then(() => new Promise((resolve) => {
-    if (gen !== generation) return resolve();
+  return new Promise((resolve) => {
     if (radio) sfx.radioIn();
     let i = 0;
     const next = () => {
@@ -213,12 +249,13 @@ export function speak(text, { persona = 'default', rate = 0.98, pitch = 1, radio
       window.speechSynthesis.speak(u);
     };
     setTimeout(next, radio ? 200 : 0);
-  }));
-  return speaking;
+  });
 }
 
 export function stopSpeaking() {
   generation++;
+  current?.stop();
+  current = null;
   if (ttsSupported()) window.speechSynthesis.cancel();
   speaking = Promise.resolve();
 }

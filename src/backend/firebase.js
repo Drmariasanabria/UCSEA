@@ -42,9 +42,17 @@ function ensureAppCheck(v, A) {
     } catch {}
     const AC = await import(cdn(v, 'app-check'));
     const app = A.getApps().length ? A.getApps()[0] : A.initializeApp(FIREBASE_CONFIG);
-    AC.initializeAppCheck(app, { provider: new AC.ReCaptchaEnterpriseProvider(RECAPTCHA_SITE_KEY), isTokenAutoRefreshEnabled: true });
+    const appCheck = AC.initializeAppCheck(app, { provider: new AC.ReCaptchaEnterpriseProvider(RECAPTCHA_SITE_KEY), isTokenAutoRefreshEnabled: true });
+    return { AC, appCheck };
   })().catch((e) => { appCheckReady = null; throw e; });
   return appCheckReady;
+}
+
+// App Check token for direct REST calls to AI Logic (used by the AI voice). Works in demo mode too.
+export async function appCheckToken() {
+  const { v, app: A } = await loadFirebaseSDK();
+  const { AC, appCheck } = await ensureAppCheck(v, A);
+  return (await AC.getToken(appCheck, false)).token;
 }
 
 export async function loadFirebaseAI() {

@@ -227,7 +227,7 @@ export default async function render(root, { path, user }) {
       (liveFilter.channel === 'all' || String(m.channel) === liveFilter.channel) &&
       (liveFilter.uid === 'all' || (liveFilter.uid === 'npc' ? m.kind === 'npc' : m.fromUid === liveFilter.uid || m.toUid === liveFilter.uid))).slice(-250);
     const atBottom = liveList.scrollHeight - liveList.scrollTop - liveList.clientHeight < 100;
-    mount(liveList, msgs.map((m) => messageEl(m, { viewer: 'teacher', onPlay: (x) => speak(x.text, { persona: x.persona || x.from }) })));
+    mount(liveList, msgs.map((m) => messageEl(m, { viewer: 'teacher', onPlay: (x) => speak(x.text, { persona: x.persona || x.from, ai: true }) })));
     if (atBottom) liveList.scrollTop = liveList.scrollHeight;
   }
   function pendingItem(m) {
