@@ -49,9 +49,17 @@ export async function createFirebaseBackend() {
   const { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, orderBy, onSnapshot, getDocs, writeBatch } = F;
 
   let profileCache = null;
+  let authCb = null; // last onAuth listener, re-notified when the role changes
   const withId = (s) => ({ id: s.id, ...s.data() });
 
-  async function isInstructor(email) {
+  // Teacher if the e-mail is allow-listed OR the user redeemed the teacher code
+  // (teacherClaims/{uid} can only be created with the right code — enforced by the rules).
+  async function hasTeacherClaim(uid) {
+    try { return (await getDoc(doc(db, 'teacherClaims', uid))).exists(); } catch { return false; }
+  }
+
+  async function isInstructor(email, uid) {
+    if (uid && (await hasTeacherClaim(uid))) return true;
     if (!email) return false;
     try {
       const s = await getDoc(doc(db, 'config', 'instructors'));
@@ -65,7 +73,7 @@ export async function createFirebaseBackend() {
   async function ensureProfile(user, extra = {}) {
     const ref = doc(db, 'profiles', user.uid);
     const snap = await getDoc(ref);
-    const teacher = await isInstructor(user.email);
+    const teacher = await isInstructor(user.email, user.uid);
     if (!snap.exists()) {
       const p = {
         uid: user.uid,
@@ -93,6 +101,7 @@ export async function createFirebaseBackend() {
     label: 'Conectado a Firebase (maritime-comms)',
 
     onAuth(cb) {
+      authCb = cb;
       return Au.onAuthStateChanged(auth, async (user) => {
         if (!user) { profileCache = null; cb(null); return; }
         try {
@@ -105,12 +114,28 @@ export async function createFirebaseBackend() {
       });
     },
     async signIn(email, password) { await Au.signInWithEmailAndPassword(auth, email, password); },
-    async signUp({ name, email, password }) {
+    async signUp({ name, email, password, teacherCode }) {
       const cred = await Au.createUserWithEmailAndPassword(auth, email, password);
       await Au.updateProfile(cred.user, { displayName: name });
+      if (teacherCode) {
+        try { await setDoc(doc(db, 'teacherClaims', cred.user.uid), { code: teacherCode.trim(), email, createdAt: Date.now() }); }
+        catch { const e = new Error('teacher-code'); e.code = 'teacher-code'; throw e; }
+      }
       profileCache = await ensureProfile(cred.user, { name });
+      authCb?.(profileCache);
     },
     async signInGoogle() { await Au.signInWithPopup(auth, new Au.GoogleAuthProvider()); },
+    async signInMicrosoft() { const p = new Au.OAuthProvider('microsoft.com'); p.setCustomParameters({ prompt: 'select_account' }); await Au.signInWithPopup(auth, p); },
+    // Logged-in user redeems the teacher code (e.g. after signing in with Google or Microsoft).
+    async claimTeacher(code) {
+      const u = auth.currentUser;
+      if (!u) throw new Error('not signed in');
+      try { await setDoc(doc(db, 'teacherClaims', u.uid), { code: String(code).trim(), email: u.email || '', createdAt: Date.now() }); }
+      catch { const e = new Error('teacher-code'); e.code = 'teacher-code'; throw e; }
+      profileCache = await ensureProfile(u);
+      authCb?.(profileCache);
+      return profileCache;
+    },
     async resetPassword(email) { await Au.sendPasswordResetEmail(auth, email); },
     async signOut() { await Au.signOut(auth); },
     async idToken() { return auth.currentUser ? auth.currentUser.getIdToken() : null; },

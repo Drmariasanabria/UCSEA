@@ -49,6 +49,8 @@ export default async function render(root, { user }) {
         field('Nombre visible', name),
         field('Titulación', select(CAREERS.map((c) => ({ value: c.id, label: c.es })), career, (v) => { career = v; user.roleId = ''; drawRole(); })),
         roleBox,
+        user.role !== 'teacher' && api.claimTeacher ? h('details', { style: { margin: '10px 0' } }, h('summary', 'Soy docente: tengo un código'),
+          (() => { const ci = h('input', { type: 'password', placeholder: 'Código de docente', autocomplete: 'off' }); return h('div.row', h('div.grow', ci), h('button.btn', { onclick: async () => { try { await api.claimTeacher(ci.value); toast('Rol docente activado.', 'success'); } catch { toast('Código incorrecto.', 'error'); } } }, 'Activar')); })()) : null,
         h('button.btn.primary', { onclick: async () => { await api.updateProfile(user.uid, { name: name.value.trim() || user.name, careerId: career, roleId: user.roleId || null }); app.set({ user: { ...app.get().user, name: name.value.trim() || user.name, careerId: career, roleId: user.roleId || null } }); toast('Perfil guardado', 'success'); } }, 'Guardar perfil')),
       h('div.panel', h('h3', icon('eye'), ' Accesibilidad'),
         field('Tamaño de letra', select([{ value: 'm', label: 'Grande (por defecto)' }, { value: 'l', label: 'Muy grande' }, { value: 'xl', label: 'Extra grande (proyector)' }], prefs.size || 'm', (v) => savePrefs({ size: v }))),

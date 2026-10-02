@@ -1,6 +1,6 @@
 rules_version = '2';
 // MAR-ESP SIM UC v10 — Firestore security rules.
-// Teacher role = e-mail listed in config/instructors { emails: [...] } (edit it in the Firebase console).
+// Teacher role = e-mail listed in config/instructors { emails: [...] } OR teacher code redeemed (teacherClaims).
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -11,26 +11,41 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/config/instructors) &&
         request.auth.token.email.lower() in get(/databases/$(database)/documents/config/instructors).data.emails;
     }
+    // Teacher code redeemed: teacherClaims/{uid} can only be created with the secret code.
+    function hasClaim() {
+      return signedIn() && exists(/databases/$(database)/documents/teacherClaims/$(me()));
+    }
+    function canBeTeacher() { return allowlisted() || hasClaim(); }
     function isTeacher() {
-      return allowlisted() &&
+      return canBeTeacher() &&
         get(/databases/$(database)/documents/profiles/$(me())).data.role == 'teacher';
     }
     function onlyChanges(keys) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
     }
 
+    // The teacher code lives in config/teacherSecret: nobody can read it from the app;
+    // the rule below only compares it. Change it from the Firebase console.
     match /config/{name} {
-      allow read: if signedIn();
-      allow write: if isTeacher();
+      allow read: if signedIn() && name != 'teacherSecret';
+      allow write: if isTeacher() && name != 'teacherSecret';
+    }
+
+    match /teacherClaims/{uid} {
+      allow read: if signedIn() && me() == uid;
+      allow create: if signedIn() && me() == uid &&
+        exists(/databases/$(database)/documents/config/teacherSecret) &&
+        request.resource.data.code == get(/databases/$(database)/documents/config/teacherSecret).data.code;
+      allow update, delete: if false;
     }
 
     match /profiles/{uid} {
       allow read: if signedIn();
       allow create: if signedIn() && me() == uid &&
-        (request.resource.data.role == 'student' || (request.resource.data.role == 'teacher' && allowlisted()));
+        (request.resource.data.role == 'student' || (request.resource.data.role == 'teacher' && canBeTeacher()));
       allow update: if signedIn() && me() == uid &&
         (!('role' in request.resource.data.diff(resource.data).affectedKeys()) ||
-          request.resource.data.role == 'student' || allowlisted());
+          request.resource.data.role == 'student' || canBeTeacher());
     }
 
     match /labs/{labId} {
@@ -85,5 +100,201 @@ service cloud.firestore {
       allow create: if signedIn() && request.resource.data.uid == me();
       allow update: if signedIn() && resource.data.uid == me();
     }
+
+    // ───── LEGACY v9 (old app: users, subjects, cohorts). Delete this section once v10 is live on main. ─────
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function memberPath(cohortId, uid) {
+      return /databases/$(database)/documents/cohorts/$(cohortId)/members/$(uid);
+    }
+
+    function isCohortMember(cohortId) {
+      return signedIn() && exists(memberPath(cohortId, request.auth.uid));
+    }
+
+    function isCohortInstructor(cohortId) {
+      return isCohortMember(cohortId)
+        && get(memberPath(cohortId, request.auth.uid)).data.role == "instructor";
+    }
+
+    function ownsNewDoc() {
+      return signedIn()
+        && request.resource.data.uid is string
+        && request.resource.data.uid == request.auth.uid;
+    }
+
+    function ownsExistingDoc() {
+      return signedIn()
+        && resource.data.uid is string
+        && resource.data.uid == request.auth.uid;
+    }
+
+    function isValidRole(role) {
+      return role in ["instructor", "student"];
+    }
+
+    function isOfficialGlossaryVisibility() {
+      return request.resource.data.visibility in ["shared", "subject", "module", "official"];
+    }
+
+    match /users/{uid} {
+      allow create, read, update, delete: if isSelf(uid);
+    }
+
+    // Subjects are shipped in the single-page app. Students and instructors may
+    // read subject metadata, but client-side writes are blocked by default.
+    match /subjects/{subjectId} {
+      allow read: if signedIn();
+      allow create, update, delete: if false;
+
+      match /modules/{moduleId} {
+        allow read: if signedIn();
+        allow create, update, delete: if false;
+      }
+    }
+
+    match /cohorts/{cohortId} {
+      // Instructors create cohorts they own. The app then creates the instructor
+      // membership document under /members/{uid}.
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.joinCode is string
+        && request.resource.data.subjectId is string;
+
+      // Needed for the current join-code lookup. Do not store private emails in
+      // cohort documents; private user data belongs in /users/{uid}.
+      allow read: if signedIn();
+
+      allow update: if isCohortInstructor(cohortId);
+      allow delete: if isCohortInstructor(cohortId);
+
+      match /members/{uid} {
+        allow create: if signedIn()
+          && (
+            request.auth.uid == uid
+            || isCohortInstructor(cohortId)
+          )
+          && request.resource.data.uid == uid
+          && isValidRole(request.resource.data.role);
+
+        allow read: if isCohortMember(cohortId);
+
+        allow update: if isCohortInstructor(cohortId)
+          || (
+            isSelf(uid)
+            && request.resource.data.role == resource.data.role
+          );
+
+        allow delete: if isCohortInstructor(cohortId) || isSelf(uid);
+      }
+
+      match /consents/{uid} {
+        allow create, update: if isCohortInstructor(cohortId)
+          || (
+            isSelf(uid)
+            && isCohortMember(cohortId)
+          );
+        allow read: if isCohortInstructor(cohortId) || isSelf(uid);
+        allow delete: if isCohortInstructor(cohortId);
+      }
+
+      match /progress/{docId} {
+        allow create, update: if isCohortInstructor(cohortId)
+          || (isCohortMember(cohortId) && ownsNewDoc());
+        allow read: if isCohortInstructor(cohortId)
+          || (isCohortMember(cohortId) && ownsExistingDoc());
+        allow delete: if isCohortInstructor(cohortId);
+      }
+
+      match /questionnaires/{docId} {
+        allow create, update: if isCohortInstructor(cohortId)
+          || (isCohortMember(cohortId) && ownsNewDoc());
+        allow read: if isCohortInstructor(cohortId)
+          || (isCohortMember(cohortId) && ownsExistingDoc());
+        allow delete: if isCohortInstructor(cohortId);
+      }
+
+      match /responses/{docId} {
+        allow create, update: if isCohortInstructor(cohortId)
+          || (isCohortMember(cohortId) && ownsNewDoc());
+        allow read: if isCohortInstructor(cohortId)
+          || (isCohortMember(cohortId) && ownsExistingDoc());
+        allow delete: if isCohortInstructor(cohortId);
+      }
+
+      match /interactionLogs/{docId} {
+        allow create: if isCohortMember(cohortId) && ownsNewDoc();
+        allow read, update, delete: if isCohortInstructor(cohortId);
+      }
+
+      match /resourceLibrary/{docId} {
+        allow read: if isCohortMember(cohortId);
+        allow create, update, delete: if isCohortInstructor(cohortId);
+      }
+
+      match /glossary/{docId} {
+        allow create: if isCohortMember(cohortId)
+          && (
+            ownsNewDoc()
+            || (isCohortInstructor(cohortId) && isOfficialGlossaryVisibility())
+          );
+
+        allow read: if isCohortMember(cohortId);
+
+        allow update, delete: if isCohortInstructor(cohortId)
+          || (
+            isCohortMember(cohortId)
+            && ownsExistingDoc()
+            && !(resource.data.visibility in ["shared", "subject", "module", "official"])
+          );
+      }
+
+      match /portfolioEntries/{docId} {
+        allow create, update: if isCohortMember(cohortId) && ownsNewDoc();
+        allow read: if isCohortInstructor(cohortId)
+          || (isCohortMember(cohortId) && ownsExistingDoc());
+        allow delete: if isCohortInstructor(cohortId)
+          || (isCohortMember(cohortId) && ownsExistingDoc());
+      }
+
+      match /badges/{docId} {
+        allow create: if isCohortInstructor(cohortId)
+          || (
+            isCohortMember(cohortId)
+            && ownsNewDoc()
+            && request.resource.data.name == "Chat participation"
+          );
+        allow read: if isCohortMember(cohortId);
+        allow update, delete: if isCohortInstructor(cohortId);
+      }
+
+      match /labSessions/{sessionId} {
+        allow create: if isCohortMember(cohortId);
+        allow read: if isCohortMember(cohortId);
+        allow update: if isCohortMember(cohortId);
+        allow delete: if isCohortInstructor(cohortId);
+
+        match /messages/{messageId} {
+          allow create: if isCohortMember(cohortId)
+            && (
+              ownsNewDoc()
+              || request.resource.data.aiGenerated == true
+              || isCohortInstructor(cohortId)
+            );
+          allow read: if isCohortMember(cohortId);
+          allow update, delete: if isCohortInstructor(cohortId);
+        }
+
+        match /participants/{uid} {
+          allow create, read, update: if isCohortMember(cohortId)
+            && request.auth.uid == uid;
+          allow delete: if isCohortInstructor(cohortId);
+        }
+      }
+    }
+
+    // ───── END LEGACY v9 ─────
   }
 }

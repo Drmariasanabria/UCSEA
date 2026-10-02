@@ -5,6 +5,9 @@ import { sfx } from '../core/audio.js';
 import { EVENTS } from '../data/events.js';
 import { ROLES, CAREERS } from '../data/careers.js';
 
+// Turn on once the Microsoft provider is configured in Firebase Authentication (needs an Azure app registration).
+const MICROSOFT_ENABLED = false;
+
 const LINES = [
   'MAYDAY, MAYDAY, MAYDAY. This is Nordic Kestrel…',
   'Traffic information. Vessel on your starboard bow, range two decimal four miles.',
@@ -38,12 +41,19 @@ export default function render(root) {
       const name = h('input', { placeholder: 'Nombre y apellidos', autocomplete: 'name' });
       const email = h('input', { type: 'email', placeholder: 'tu@alumnos.unican.es', autocomplete: 'email' });
       const pass = h('input', { type: 'password', placeholder: '••••••••', autocomplete: tab === 'in' ? 'current-password' : 'new-password' });
+      let wantTeacher = false;
+      const codeIn = h('input', { type: 'password', placeholder: 'Código facilitado por la coordinación', autocomplete: 'off' });
+      const codeBox = h('div.hidden', field('Código de docente', codeIn, 'Solo el profesorado tiene este código. Sin él, la cuenta se crea como estudiante.'));
+      const roleSeg = h('div.seg');
+      const drawRoleSeg = () => mount(roleSeg, ...[[false, 'Soy estudiante'], [true, 'Soy docente']].map(([v, l]) => h('button' + (wantTeacher === v ? '.on' : ''), { type: 'button', onclick: () => { wantTeacher = v; codeBox.classList.toggle('hidden', !v); drawRoleSeg(); } }, l)));
+      drawRoleSeg();
       const submit = async () => {
         try {
           if (tab === 'in') await api.signIn(email.value.trim(), pass.value);
           else {
             if (!name.value.trim()) return toast('Escribe tu nombre.', 'warn');
-            await api.signUp({ name: name.value.trim(), email: email.value.trim(), password: pass.value });
+            if (wantTeacher && !codeIn.value.trim()) return toast('Introduce el código de docente.', 'warn');
+            await api.signUp({ name: name.value.trim(), email: email.value.trim(), password: pass.value, teacherCode: wantTeacher ? codeIn.value : null });
           }
           sfx.success();
         } catch (e) {
@@ -53,12 +63,15 @@ export default function render(root) {
       };
       pass.addEventListener('keydown', (e) => e.key === 'Enter' && submit());
       mount(body,
+        tab === 'up' ? roleSeg : null,
+        tab === 'up' ? codeBox : null,
         tab === 'up' ? field('Nombre', name) : null,
-        field('Correo', email),
-        field('Contraseña', pass, tab === 'up' ? 'Mínimo 6 caracteres. El rol docente se asigna si tu correo está autorizado.' : null),
+        field('Correo', email, tab === 'up' ? 'Sirve cualquier correo: Outlook, Hotmail, Gmail o el de la universidad.' : null),
+        field('Contraseña', pass, tab === 'up' ? 'Mínimo 6 caracteres.' : null),
         h('button.btn.primary.big', { style: { width: '100%' }, onclick: submit }, icon('anchor'), tab === 'in' ? 'Subir a bordo' : 'Crear cuenta'),
         h('div.row', { style: { marginTop: '12px', justifyContent: 'space-between' } },
           h('button.btn.ghost.small', { onclick: async () => { try { await api.signInGoogle(); } catch (e) { toast(authError(e), 'error'); } } }, 'Entrar con Google'),
+          MICROSOFT_ENABLED ? h('button.btn.ghost.small', { onclick: async () => { try { await api.signInMicrosoft(); } catch (e) { toast(authError(e), 'error'); } } }, 'Entrar con Microsoft / Outlook') : null,
           tab === 'in' ? h('button.btn.ghost.small', { onclick: async () => { if (!email.value) return toast('Escribe tu correo primero.', 'warn'); await api.resetPassword(email.value.trim()); toast('Te hemos enviado un correo para restablecer la contraseña.', 'success'); } }, '¿Olvidaste la contraseña?') : null));
     } else {
       const name = h('input', { placeholder: 'Tu nombre', value: '' });
@@ -112,6 +125,7 @@ export default function render(root) {
 function authError(e) {
   const c = e?.code || '';
   if (c.includes('invalid-credential') || c.includes('wrong-password') || c.includes('user-not-found')) return 'Correo o contraseña incorrectos.';
+  if (c === 'teacher-code') return 'Código de docente incorrecto. Tu cuenta se ha creado como estudiante; puedes introducir el código correcto en Ajustes.';
   if (c.includes('email-already-in-use')) return 'Ese correo ya tiene cuenta. Usa «Entrar».';
   if (c.includes('weak-password')) return 'La contraseña debe tener al menos 6 caracteres.';
   if (c.includes('invalid-email')) return 'Correo no válido.';
