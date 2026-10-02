@@ -306,7 +306,11 @@ function consoleView(root, session, user) {
   unsubs.push(session.on('comms', ({ added } = {}) => {
     drawLeft();
     for (const m of added || []) {
-      if (m.kind === 'npc' && voices && Date.now() - m.ts < 20000) speak(m.text, { persona: m.persona || m.from });
+      if (m.kind === 'npc' && voices && Date.now() - m.ts < 20000) {
+        // AI voice only on the client of the person being answered (saves the free quota); others use browser voices
+        const toMe = st.comms.find((c) => c.id === m.replyTo)?.fromUid === session.viewer;
+        speak(m.text, { persona: m.persona || m.from, ai: toMe && !session.spectating });
+      }
       if (m.kind === 'whisper' && m.toUid === session.viewer) { sfx.notify(); toast('🔒 Docente: ' + m.text, 'info', 9000); }
     }
   }));

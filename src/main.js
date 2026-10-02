@@ -6,6 +6,7 @@ import { startBackdrop } from './ui/backdrop.js';
 import { logo, wordmark } from './ui/brand.js';
 import { unlockAudio, setSoundEnabled, sfx, stopAllAlarms, stopAmbient } from './core/audio.js';
 import { stopSpeaking } from './core/speech.js';
+import { warmAiVoice } from './core/ai-voice.js';
 import { initials } from './core/util.js';
 
 const ROUTES = {
@@ -104,6 +105,7 @@ async function boot() {
   applyPrefs();
   unlockAudio();
   backdrop = startBackdrop(document.getElementById('backdrop'));
+  setTimeout(warmAiVoice, 2500);
   const api = await initBackend();
   if (api.fallbackReason) setTimeout(() => toast(api.fallbackReason, 'warn', 7000), 800);
   let first = true;

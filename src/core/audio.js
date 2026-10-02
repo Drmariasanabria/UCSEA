@@ -190,3 +190,43 @@ export function stopAmbient() {
   ambientNodes?.stop();
   ambientNodes = null;
 }
+
+// ---------- voice playback (AI voice) with an optional VHF radio chain ----------
+let voiceOut = null;
+export function audioContext() { return ac(); }
+export function playVoiceBuffer(buffer, { radio = true } = {}) {
+  const c = ac();
+  if (!c) return { done: Promise.resolve(), stop() {} };
+  if (!voiceOut) { voiceOut = c.createGain(); voiceOut.gain.value = 1; voiceOut.connect(c.destination); }
+  const src = c.createBufferSource();
+  src.buffer = buffer;
+  const nodes = [];
+  let last = src;
+  const chain = (n) => { last.connect(n); last = n; nodes.push(n); return n; };
+  let noise = null;
+  if (radio) {
+    // VHF voice band (~300–3200 Hz), presence peak, gentle saturation and compression
+    const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 320; hp.Q.value = 0.8; chain(hp);
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200; lp.Q.value = 0.8; chain(lp);
+    const pk = c.createBiquadFilter(); pk.type = 'peaking'; pk.frequency.value = 1800; pk.gain.value = 4; chain(pk);
+    const ws = c.createWaveShaper();
+    const curve = new Float32Array(1024);
+    for (let i = 0; i < 1024; i++) { const x = (i / 512) - 1; curve[i] = Math.tanh(2.2 * x) / Math.tanh(2.2); }
+    ws.curve = curve; chain(ws);
+    const comp = c.createDynamicsCompressor(); comp.threshold.value = -24; comp.ratio.value = 4; chain(comp);
+    const g = c.createGain(); g.gain.value = 0.9; chain(g);
+    // background carrier hiss while transmitting
+    const nb = c.createBuffer(1, c.sampleRate * 1, c.sampleRate);
+    const d = nb.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.5;
+    noise = c.createBufferSource(); noise.buffer = nb; noise.loop = true;
+    const nf = c.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 2200; nf.Q.value = 0.6;
+    const ng = c.createGain(); ng.gain.value = 0.018;
+    noise.connect(nf).connect(ng).connect(voiceOut);
+  }
+  last.connect(voiceOut);
+  const done = new Promise((resolve) => { src.onended = () => { try { noise?.stop(); } catch {} resolve(); }; });
+  noise?.start();
+  src.start();
+  return { done, stop() { try { src.stop(); } catch {} try { noise?.stop(); } catch {} } };
+}
