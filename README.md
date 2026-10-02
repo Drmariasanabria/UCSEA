@@ -63,4 +63,4 @@ Si Firebase no responde, la app pasa automáticamente al modo demo y avisa.
 
 Los indicadores automáticos (estructuras, precisión SMCP, tiempos de reacción) son reglas explicables que **apoyan** la evaluación docente; no la sustituyen ni prueban por sí solos un efecto de aprendizaje. Los barcos, personas y empresas de los escenarios y misiones son ficticios; los casos reales (MAIB 29/2014, 6/2016) solo inspiran situaciones.
 
-La carpeta antigua (`assets/`, `itm2-missions/`, `simulator3d/`, `audio/`, `tests/`) pertenece a la v9 y ya no se usa.
+La versión anterior (v9) se conserva como archivo histórico inactivo en `archive/v9/`.
