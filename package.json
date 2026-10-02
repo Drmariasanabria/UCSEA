@@ -1,0 +1,12 @@
+{
+  "name": "marespuc-simulator",
+  "version": "10.0.0",
+  "private": true,
+  "description": "MAR-ESP SIM UC — Maritime English communication simulator (Universidad de Cantabria)",
+  "type": "module",
+  "scripts": {
+    "start": "npx http-server . -p 8080 -c-1",
+    "test": "node --test test/*.test.js"
+  },
+  "license": "SEE LICENSE IN LICENSE"
+}
