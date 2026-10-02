@@ -10,7 +10,7 @@ import { eventById } from '../data/events.js';
 import { roleById } from '../data/careers.js';
 import { db } from '../backend/index.js';
 
-const DEFAULT_GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
+const DEFAULT_GEMINI_MODELS = ['gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.8-flash', 'gemini-flash-latest'];
 let geminiModel = null;
 let geminiFailedUntil = 0;
 let functionFailedUntil = 0;
@@ -87,15 +87,16 @@ async function viaGemini(prompt, cfg) {
   if (api.mode !== 'firebase' || !api.firebaseApp) throw new Error('Gemini requires Firebase mode');
   const { loadFirebaseAI } = await import('../backend/firebase.js');
   const AI = await loadFirebaseAI();
-  const models = cfg?.geminiModel ? [cfg.geminiModel, ...DEFAULT_GEMINI_MODELS] : DEFAULT_GEMINI_MODELS;
+  // Last model that answered first, then the teacher's choice, then the defaults (a busy model fails fast with 500/503).
+  const models = [...new Set([geminiModel, cfg?.geminiModel, ...DEFAULT_GEMINI_MODELS].filter(Boolean))];
   const ai = AI.getAI(api.firebaseApp, { backend: new AI.GoogleAIBackend() });
   let lastErr;
-  for (const model of geminiModel ? [geminiModel] : models) {
+  for (const model of models) {
     try {
       const m = AI.getGenerativeModel(ai, { model, systemInstruction: prompt.system, generationConfig: { maxOutputTokens: 400, temperature: 0.6 } });
-      const res = await m.generateContent({
+      const res = await withTimeout(m.generateContent({
         contents: prompt.messages.map((x) => ({ role: x.role === 'assistant' ? 'model' : 'user', parts: [{ text: x.content }] })),
-      });
+      }), 10000);
       const out = res.response.text();
       if (!out?.trim()) throw new Error('empty');
       geminiModel = model;
@@ -142,7 +143,7 @@ export async function npcReply(ctx) {
         return { text: cleanReply(r.text), provider: 'function', model: r.model, intent };
       }
       if (p === 'gemini') {
-        const r = await withTimeout(viaGemini(prompt, cfg), 12000);
+        const r = await withTimeout(viaGemini(prompt, cfg), 22000);
         return { text: cleanReply(r.text), provider: 'gemini', model: r.model, intent };
       }
     } catch (e) {
@@ -159,7 +160,7 @@ export async function coachFeedback({ text, task, lab, cfg = {} }) {
   const prompt = { system, messages: [{ role: 'user', content: `Task: ${task}\n\nStudent text:\n${text}` }] };
   for (const p of cfg.provider === 'local' ? [] : ['function', 'gemini']) {
     try {
-      const r = p === 'function' ? await withTimeout(viaFunction(prompt, cfg), 12000) : await withTimeout(viaGemini(prompt, cfg), 12000);
+      const r = p === 'function' ? await withTimeout(viaFunction(prompt, cfg), 12000) : await withTimeout(viaGemini(prompt, cfg), 22000);
       return { text: r.text.trim(), provider: p };
     } catch { /* next */ }
   }

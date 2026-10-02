@@ -31,8 +31,25 @@ export async function loadFirebaseSDK() {
   throw lastErr || new Error('Firebase SDK unavailable');
 }
 
+// AI Logic only answers requests that carry a valid App Check token (reCAPTCHA, free tier).
+export const RECAPTCHA_SITE_KEY = '6LfHpdotAAAAAPrPE1Bob36cgoRcyzkiCNhiy5Xx';
+let appCheckReady = null;
+function ensureAppCheck(v, A) {
+  appCheckReady ??= (async () => {
+    try {
+      const debug = localStorage.getItem('mesim10:appCheckDebug');
+      if (debug) self.FIREBASE_APPCHECK_DEBUG_TOKEN = debug;
+    } catch {}
+    const AC = await import(cdn(v, 'app-check'));
+    const app = A.getApps().length ? A.getApps()[0] : A.initializeApp(FIREBASE_CONFIG);
+    AC.initializeAppCheck(app, { provider: new AC.ReCaptchaEnterpriseProvider(RECAPTCHA_SITE_KEY), isTokenAutoRefreshEnabled: true });
+  })().catch((e) => { appCheckReady = null; throw e; });
+  return appCheckReady;
+}
+
 export async function loadFirebaseAI() {
-  const { v } = await loadFirebaseSDK();
+  const { v, app: A } = await loadFirebaseSDK();
+  await ensureAppCheck(v, A);
   return import(cdn(v, 'ai'));
 }
 
@@ -266,5 +283,7 @@ export async function createFirebaseBackend() {
     async setConfig(name, value) { await setDoc(doc(db, 'config', name), value, { merge: true }); return value; },
     firebaseApp: app,
   };
+  // Warm up App Check + AI Logic in the background so the first radio reply is not delayed.
+  setTimeout(() => loadFirebaseAI().catch(() => {}), 3000);
   return api;
 }

@@ -71,9 +71,9 @@ export default async function render(root, { user }) {
         user.role === 'teacher' ? h('details', { style: { marginTop: '12px' } }, h('summary', 'Configuración de Firebase para docentes'),
           h('ol.small',
             h('li', 'Firebase console → Authentication → activar «Correo/contraseña» y «Google».'),
-            h('li', 'Firestore → crear el documento config/instructors con el campo emails (array) con los correos docentes.'),
+            h('li', 'Docentes: o bien su correo en config/instructors (campo emails), o bien el código de docente guardado en config/teacherSecret (campo code, nunca en el repositorio).'),
             h('li', 'Firestore → Reglas: publicar el contenido de firestore.rules del repositorio.'),
-            h('li', 'IA sin claves en el navegador: Firebase console → AI Logic → «Get started» con Gemini Developer API (plan gratuito).'),
+            h('li', 'IA sin claves en el navegador: AI Logic (Gemini Developer API, gratuito) protegido con App Check + reCAPTCHA. Ya está configurado en maritime-comms.'),
             h('li', 'Opcional (Claude): desplegar functions/ con el secreto ANTHROPIC_API_KEY y pegar la URL en la pestaña IA de la consola.'))) : null)),
     h('p.small.center', { style: { marginTop: '24px' } }, `MAR-ESP SIM UC v10 · ${careerById(user.careerId)?.es || ''} · Universidad de Cantabria · Proyecto de innovación docente`)));
 }

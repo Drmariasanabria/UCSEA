@@ -482,7 +482,7 @@ export default async function render(root, { path, user }) {
     const provider = select([{ value: 'auto', label: 'Automático: Claude (si hay función) → Gemini → motor local' }, { value: 'gemini', label: 'Gemini (Firebase AI Logic) → motor local' }, { value: 'local', label: 'Solo motor SMCP local' }], ai.provider || 'auto', () => {});
     const mode = select([{ value: 'auto', label: 'Automático (responde la IA)' }, { value: 'approve', label: 'Borrador IA + aprobación docente' }, { value: 'manual', label: 'Manual (respondes tú)' }], ai.mode || 'auto', () => {});
     const fn = h('input', { value: ai.functionUrl || '', placeholder: 'https://europe-west1-maritime-comms.cloudfunctions.net/npcReply' });
-    const gm = h('input', { value: ai.geminiModel || '', placeholder: 'gemini-2.5-flash (por defecto)' });
+    const gm = h('input', { value: ai.geminiModel || '', placeholder: 'gemini-3.5-flash-lite (por defecto)' });
     const persona = h('textarea', { rows: 3, placeholder: 'Ej.: El VTS es estricto con el procedimiento y pide siempre la posición. Los buques responden a veces de forma ambigua para forzar reparaciones.' }, ai.persona || '');
     const testOut = h('div');
     mount(body, h('div.col',

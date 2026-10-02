@@ -38,9 +38,9 @@ Servidor local: `npx http-server . -p 8080` → http://localhost:8080/?mode=demo
 ## Puesta en marcha con Firebase (proyecto `maritime-comms`)
 
 1. **Authentication** → Sign-in method: activar *Correo/contraseña* y *Google*. Añadir el dominio de GitHub Pages en *Authorized domains*.
-2. **Firestore** → crear el documento `config/instructors` con el campo `emails` (array de strings) con los correos del profesorado. Esas cuentas reciben el rol docente; el resto es estudiante.
+2. **Firestore** → crear el documento `config/instructors` con el campo `emails` (array de strings) con los correos del profesorado. Esas cuentas reciben el rol docente. Además, quien cree una cuenta marcando «Soy docente» debe introducir el **código de docente**, que se guarda solo en `config/teacherSecret` (campo `code`, ilegible desde la app y validado por las reglas). Sin código, la cuenta es de estudiante.
 3. **Firestore → Reglas**: copiar y publicar `firestore.rules` (o `firebase deploy --only firestore:rules`).
-4. **IA sin claves en el navegador**: Firebase console → **AI Logic** → *Get started* → *Gemini Developer API* (plan gratuito). En la consola docente → pestaña IA → «Probar respuesta del VTS».
+4. **IA sin claves en el navegador**: Firebase console → **AI Logic** → *Gemini Developer API* (plan gratuito). AI Logic exige **App Check**: clave reCAPTCHA (gratis hasta 10 000 verificaciones/mes) registrada en App Check y `RECAPTCHA_SITE_KEY` en `src/backend/firebase.js`. Para pruebas locales: token de depuración en `localStorage['mesim10:appCheckDebug']`. En la consola docente → pestaña IA → «Probar respuesta del VTS».
 5. *(Opcional, Claude)*: `cd functions && npm install`, `firebase functions:secrets:set ANTHROPIC_API_KEY`, `firebase deploy --only functions`, y pegar la URL de `npcReply` en la pestaña IA. La clave vive en Secret Manager; la función solo responde a usuarios autenticados del proyecto.
 
 Si Firebase no responde, la app pasa automáticamente al modo demo y avisa.
