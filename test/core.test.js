@@ -200,3 +200,14 @@ test('fluency from spoken messages', () => {
   assert.equal(f.wpm, 100);
   assert.equal(f.confidence, 90);
 });
+
+test('radio TTS text is read the SMCP way', async () => {
+  globalThis.window ??= globalThis;
+  const { radioText, voiceScore } = await import('../src/core/speech.js');
+  assert.match(radioText('course 080, CPA 2.4 NM'), /course zero eight zero, C P A two decimal four nautical miles/);
+  assert.match(radioText('Heading 233° speed 12 kn'), /two three three degrees speed 12 knots/);
+  assert.match(radioText('Call VTS on VHF 74, ETA 1400 LT'), /V T S on channel seven four, E T A one four zero zero local time/);
+  assert.match(radioText('SÉCURITÉ. QUESTION. Over.'), /^Say-cure-ee-tay\. Question\. Over\.$/);
+  assert.ok(voiceScore({ name: 'Microsoft Sonia Online (Natural) - English (United Kingdom)', lang: 'en-GB' }) > voiceScore({ name: 'Google UK English Female', lang: 'en-GB' }));
+  assert.ok(voiceScore({ name: 'Zarvox', lang: 'en-US' }) < 0);
+});

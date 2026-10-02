@@ -5,7 +5,7 @@ import { db, setPreferredMode } from '../backend/index.js';
 import { CAREERS, rolesFor, careerById } from '../data/careers.js';
 import { QUESTIONNAIRE, OPEN_QUESTIONS, CONSENT_TEXT } from '../data/research.js';
 import { savePrefs } from '../main.js';
-import { englishVoices, speak } from '../core/speech.js';
+import { englishVoices, speak, voiceScore, stopSpeaking } from '../core/speech.js';
 import { sfx } from '../core/audio.js';
 
 export default async function render(root, { user }) {
@@ -41,7 +41,24 @@ export default async function render(root, { user }) {
       } }, 'Enviar')));
   }
 
-  const voices = englishVoices();
+  // Voice picker: browser voices ranked by naturalness; the chosen one narrates and the best others play the stations.
+  const voiceBox = h('div');
+  const SAMPLE = 'Nordic Kestrel, this is Channel Traffic. Traffic information. Vessel on your starboard bow, range 2.4 NM, CPA 0.3 NM. What are your intentions? Over.';
+  const stars = (v) => { const sc = voiceScore(v); return sc >= 100 ? '★★★ natural' : sc >= 70 ? '★★ alta' : sc >= 30 ? '★ buena' : 'básica'; };
+  function drawVoices() {
+    const list = englishVoices().filter((v) => voiceScore(v) > -100);
+    const cur = prefs.voice || '';
+    const best = list[0];
+    mount(voiceBox,
+      field('Voz principal (narrador y estaciones)', select([{ value: '', label: best ? `Automática · ${best.name} (${stars(best)})` : 'Automática' }, ...list.slice(0, 24).map((v) => ({ value: v.name, label: `${v.name} · ${v.lang} · ${stars(v)}` }))], cur, (v) => { savePrefs({ voice: v || null }); prefs.voice = v || null; stopSpeaking(); speak(SAMPLE, { persona: 'default' }); })),
+      h('div.row', h('button.btn.small', { onclick: () => { stopSpeaking(); speak(SAMPLE, { persona: 'default' }); } }, icon('sound'), 'Probar voz'),
+        h('button.btn.small.ghost', { onclick: () => { stopSpeaking(); speak('MAYDAY, MAYDAY, MAYDAY. This is Nordic Kestrel. Fire in the engine room. Over.', { persona: 'mrcc' }); } }, 'Otra estación')),
+      h('p.small', list.length
+        ? (voiceScore(list[0]) >= 100 ? 'Tu navegador tiene voces naturales: se usan automáticamente.' : 'Para voces mucho más naturales (y gratis), abre UCSea en Microsoft Edge: incluye voces neuronales «Natural». En Chrome se usan las voces de Google; en Safari, instala voces «Mejoradas/Premium» en Ajustes del sistema → Accesibilidad → Contenido leído.')
+        : 'Cargando voces del navegador…'));
+  }
+  drawVoices();
+  if ('speechSynthesis' in window) window.speechSynthesis.addEventListener?.('voiceschanged', drawVoices);
   mount(root, h('div.page',
     h('div.page-head', h('div', h('span.eyebrow', 'Ajustes'), h('h2', 'Tu puesto, accesibilidad y datos'))),
     h('div.grid.g2',
@@ -56,8 +73,7 @@ export default async function render(root, { user }) {
         field('Tamaño de letra', select([{ value: 'm', label: 'Grande (por defecto)' }, { value: 'l', label: 'Muy grande' }, { value: 'xl', label: 'Extra grande (proyector)' }], prefs.size || 'm', (v) => savePrefs({ size: v }))),
         h('label.check', h('input', { type: 'checkbox', checked: !!prefs.contrast, onchange: (e) => savePrefs({ contrast: e.target.checked }) }), h('span', 'Alto contraste')),
         h('label.check', h('input', { type: 'checkbox', checked: prefs.sound !== false, onchange: (e) => savePrefs({ sound: e.target.checked }) }), h('span', 'Efectos de sonido y alarmas')),
-        h('p.small', `${voices.length} voces en inglés disponibles en este navegador.`),
-        h('button.btn.small', { onclick: () => speak('Nordic Kestrel, this is Channel Traffic. Traffic information. Over.', { persona: 'vts' }) }, icon('sound'), 'Probar voz de radio')),
+        voiceBox),
       h('div.panel', h('h3', icon('doc'), ' Investigación (proyecto de innovación docente)'),
         h('p.small', 'Dos cuestionarios breves (inicio y final de curso) para medir el impacto del simulador.'),
         h('div.row', h('button.btn' + (done('pre') ? '.ghost' : '.primary'), { onclick: () => drawResearch('pre') }, done('pre') ? 'PRE ✓ (repetir)' : 'Hacer cuestionario PRE'),
