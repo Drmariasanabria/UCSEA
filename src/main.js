@@ -7,6 +7,7 @@ import { logo, wordmark } from './ui/brand.js';
 import { unlockAudio, setSoundEnabled, sfx, stopAllAlarms, stopAmbient } from './core/audio.js';
 import { stopSpeaking } from './core/speech.js';
 import { warmAiVoice } from './core/ai-voice.js';
+import { initI18n, langSwitch } from './core/i18n.js';
 import { initials } from './core/util.js';
 
 const ROUTES = {
@@ -61,6 +62,7 @@ function topbar(route) {
     h('nav.nav', { 'aria-label': 'Principal' }, items.map((it) =>
       h('a' + (route === it.id ? '.active' : ''), { href: '#/' + it.id }, icon(it.icon), it.label))),
     h('div.userbox',
+      langSwitch(),
       h('span.mode-pill' + (db()?.mode === 'demo' ? '.demo' : ''), db()?.mode === 'demo' ? 'DEMO' : 'FIREBASE'),
       h('button.icon-btn', {
         title: soundOn ? 'Silenciar' : 'Activar sonido', 'aria-label': 'Sonido',
@@ -103,6 +105,7 @@ async function render() {
 
 async function boot() {
   applyPrefs();
+  initI18n();
   unlockAudio();
   backdrop = startBackdrop(document.getElementById('backdrop'));
   setTimeout(warmAiVoice, 2500);

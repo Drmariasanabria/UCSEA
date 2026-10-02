@@ -45,6 +45,10 @@ Servidor local: `npx http-server . -p 8080` → http://localhost:8080/?mode=demo
 
 Si Firebase no responde, la app pasa automáticamente al modo demo y avisa.
 
+## Idioma de la interfaz
+
+Selector con banderas (arriba a la derecha y en la portada) y en Ajustes: **ES** muestra la interfaz tal como está diseñada; **EN** la muestra íntegramente en inglés. Las traducciones al español del glosario, los mensajes de radio y el texto escrito por el alumnado no se traducen. Diccionario en `src/i18n/en.js` (claves = texto español exacto; admite plantillas `${…}`); motor en `src/core/i18n.js`.
+
 ## Diseño
 
 - **Fondo cinematográfico**: carrusel de fotos marítimas (Pexels, licencia gratuita sin atribución obligatoria) con efecto Ken Burns, capa holográfica animada (mar en malla, partículas de luz), barrido de radar y paralaje con el ratón. Las fotos se piden comprimidas y después del primer pintado; si una falla, se salta. La animación se pausa con la pestaña oculta y respeta «reducir movimiento».

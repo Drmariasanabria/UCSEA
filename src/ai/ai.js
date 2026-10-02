@@ -3,6 +3,7 @@
 //   1. 'function'  – optional Firebase Cloud Function (Claude, key in Secret Manager)
 //   2. 'gemini'    – Firebase AI Logic (Gemini Developer API, no key in the browser)
 //   3. 'local'     – deterministic SMCP engine (always available)
+import { isEN } from '../core/i18n.js';
 import { localReply, detectIntent } from './local-engine.js';
 import { PERSONAS, stationName } from './npc.js';
 import { picture, shipClock, latLonText } from '../sim/engine.js';
@@ -156,7 +157,7 @@ export async function npcReply(ctx) {
 
 // Short coaching feedback on a written message (missions & debrief). Uses the same chain.
 export async function coachFeedback({ text, task, lab, cfg = {} }) {
-  const system = 'You are a maritime English teacher (CEFR B1–B2, IMO SMCP). Give feedback in Spanish, max 90 words: 1) what works, 2) the most important correction with a corrected English example, 3) one SMCP/precision tip. Do not rewrite the whole text.';
+  const system = `You are a maritime English teacher (CEFR B1–B2, IMO SMCP). Give feedback in ${isEN() ? 'English' : 'Spanish'}, max 90 words: 1) what works, 2) the most important correction with a corrected English example, 3) one SMCP/precision tip. Do not rewrite the whole text.`;
   const prompt = { system, messages: [{ role: 'user', content: `Task: ${task}\n\nStudent text:\n${text}` }] };
   for (const p of cfg.provider === 'local' ? [] : ['function', 'gemini']) {
     try {

@@ -211,3 +211,15 @@ test('radio TTS text is read the SMCP way', async () => {
   assert.ok(voiceScore({ name: 'Microsoft Sonia Online (Natural) - English (United Kingdom)', lang: 'en-GB' }) > voiceScore({ name: 'Google UK English Female', lang: 'en-GB' }));
   assert.ok(voiceScore({ name: 'Zarvox', lang: 'en-US' }) < 0);
 });
+
+test('English interface: dictionary translations are stable (no re-translation loops)', async () => {
+  globalThis.window ??= globalThis;
+  globalThis.localStorage = { getItem: () => JSON.stringify({ lang: 'en' }), setItem() {} };
+  const { t } = await import('../src/core/i18n.js');
+  const { EN } = await import('../src/i18n/en.js');
+  for (const v of Object.values(EN)) assert.equal(t(t(v)), t(v), `unstable: ${v}`);
+  assert.equal(t('Nueva sesión'), 'New session');
+  assert.equal(t('120 términos · 175 enlaces'), '120 terms · 175 links');
+  assert.equal(t('SITUACIÓN DE APROXIMACIÓN EXCESIVA'), 'CLOSE-QUARTERS SITUATION');
+  assert.equal(t(' Tus sesiones activas'), ' Your active sessions');
+});

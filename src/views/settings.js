@@ -5,6 +5,7 @@ import { db, setPreferredMode } from '../backend/index.js';
 import { CAREERS, rolesFor, careerById } from '../data/careers.js';
 import { QUESTIONNAIRE, OPEN_QUESTIONS, CONSENT_TEXT } from '../data/research.js';
 import { savePrefs } from '../main.js';
+import { isEN, getLang, setLang } from '../core/i18n.js';
 import { englishVoices, speak, voiceScore, stopSpeaking, lastVoiceEngine } from '../core/speech.js';
 import { sfx } from '../core/audio.js';
 
@@ -29,7 +30,7 @@ export default async function render(root, { user }) {
       h('label.check', h('input', { type: 'checkbox', onchange: (e) => (consent = e.target.checked) }), h('span', 'Doy mi consentimiento informado para participar.')),
       h('h4', phase === 'pre' ? 'Cuestionario inicial (PRE)' : 'Cuestionario final (POST)'),
       h('p.small', '1 = totalmente en desacuerdo · 5 = totalmente de acuerdo'),
-      QUESTIONNAIRE.map((q) => h('div.task', h('div', q.es), h('div.small.dim', q.en),
+      QUESTIONNAIRE.map((q) => h('div.task', h('div', q.es), isEN() ? null : h('div.small.dim', q.en),
         h('div.row', { style: { marginTop: '6px' } }, [1, 2, 3, 4, 5].map((v) => h('button.chip', { onclick: (e) => { answers[q.id] = v; [...e.target.parentNode.children].forEach((x) => x.classList.remove('on')); e.target.classList.add('on'); } }, String(v)))))),
       OPEN_QUESTIONS.map((q) => field(q.es, h('textarea', { rows: 2, oninput: (e) => (open[q.id] = e.target.value) }))),
       h('button.btn.primary', { onclick: async () => {
@@ -82,6 +83,7 @@ export default async function render(root, { user }) {
           (() => { const ci = h('input', { type: 'password', placeholder: 'Código de docente', autocomplete: 'off' }); return h('div.row', h('div.grow', ci), h('button.btn', { onclick: async () => { try { await api.claimTeacher(ci.value); toast('Rol docente activado.', 'success'); } catch { toast('Código incorrecto.', 'error'); } } }, 'Activar')); })()) : null,
         h('button.btn.primary', { onclick: async () => { await api.updateProfile(user.uid, { name: name.value.trim() || user.name, careerId: career, roleId: user.roleId || null }); app.set({ user: { ...app.get().user, name: name.value.trim() || user.name, careerId: career, roleId: user.roleId || null } }); toast('Perfil guardado', 'success'); } }, 'Guardar perfil')),
       h('div.panel', h('h3', icon('eye'), ' Accesibilidad'),
+        field('Idioma de la interfaz', select([{ value: 'es', label: 'Español (como está diseñada)' }, { value: 'en', label: 'English (full English interface)' }], getLang(), (v) => setLang(v))),
         field('Tamaño de letra', select([{ value: 'm', label: 'Grande (por defecto)' }, { value: 'l', label: 'Muy grande' }, { value: 'xl', label: 'Extra grande (proyector)' }], prefs.size || 'm', (v) => savePrefs({ size: v }))),
         h('label.check', h('input', { type: 'checkbox', checked: !!prefs.contrast, onchange: (e) => savePrefs({ contrast: e.target.checked }) }), h('span', 'Alto contraste')),
         h('label.check', h('input', { type: 'checkbox', checked: prefs.sound !== false, onchange: (e) => savePrefs({ sound: e.target.checked }) }), h('span', 'Efectos de sonido y alarmas')),

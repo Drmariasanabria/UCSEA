@@ -7,6 +7,7 @@ import { ROLES, CAREERS } from '../data/careers.js';
 import { getBackdrop } from '../main.js';
 import { SLIDES } from '../ui/backdrop.js';
 import { logo, wordmark } from '../ui/brand.js';
+import { langSwitch } from '../core/i18n.js';
 
 // Turn on once the Microsoft provider is configured in Firebase Authentication (needs an Azure app registration).
 const MICROSOFT_ENABLED = false;
@@ -120,7 +121,7 @@ export default function render(root) {
   mount(root, h('section.landing',
     h('header.landing-top',
       h('div.brand', logo(42), wordmark()),
-      h('span.uc', 'Universidad de Cantabria · Inglés Técnico Marítimo II')),
+      h('div.row', { style: { gap: '18px' } }, h('span.uc', 'Universidad de Cantabria · Inglés Técnico Marítimo II'), langSwitch())),
     h('div.landing-hero',
       h('span.eyebrow', 'Maritime English Simulator'),
       h('h1.mega', h('b', 'UC'), h('span', 'Sea')),

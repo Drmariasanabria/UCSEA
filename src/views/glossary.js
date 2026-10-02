@@ -110,7 +110,7 @@ export default function render(root, { user, query }) {
     const voted = (t.voters || []).includes(user.uid);
     return h('div.term-card',
       h('div.row.between', h('span.t', t.term), h('span.badge', { style: { color: catColor(t.category), borderColor: catColor(t.category) } }, GLOSSARY_CATEGORIES[t.category]?.es || t.category)),
-      t.es ? h('span.es', t.es) : null,
+      t.es ? h('span.es', { 'data-keep': true }, t.es) : null,
       h('p', { style: { margin: 0 } }, t.def),
       t.example ? h('div.ex', t.example) : null,
       t.related?.length ? h('div.row', { style: { gap: '4px' } }, t.related.map((r) => byId.get(r)).filter(Boolean).map((r) => h('button.chip', { onclick: () => { if (graph) { graph.select(r.id); showDetail(r); } else { q = r.term; drawSide(); drawMain(); } } }, r.term))) : null,
@@ -182,8 +182,8 @@ export default function render(root, { user, query }) {
       const t = deck[i % deck.length];
       mount(box, h('div.panel', { style: { minHeight: '320px', display: 'grid', placeItems: 'center', textAlign: 'center', cursor: 'pointer' }, onclick: () => { flipped = !flipped; sfx.whoosh(); draw(); } },
         flipped
-          ? h('div', h('div.t', { style: { font: '800 2rem var(--display)' } }, t.term), h('p', { style: { color: 'var(--accent-2)', fontSize: '1.3rem' } }, t.es), h('p.muted', t.def), t.example ? h('p', h('i', t.example)) : null)
-          : h('div', h('span.eyebrow', GLOSSARY_CATEGORIES[t.category]?.es), h('div', { style: { font: '800 2.4rem var(--display)' } }, t.es || t.def), h('p.muted', 'Pulsa para ver el término en inglés'))),
+          ? h('div', h('div.t', { style: { font: '800 2rem var(--display)' } }, t.term), h('p', { 'data-keep': true, style: { color: 'var(--accent-2)', fontSize: '1.3rem' } }, t.es), h('p.muted', t.def), t.example ? h('p', h('i', t.example)) : null)
+          : h('div', h('span.eyebrow', GLOSSARY_CATEGORIES[t.category]?.es), h('div', { 'data-keep': true, style: { font: '800 2.4rem var(--display)' } }, t.es || t.def), h('p.muted', 'Pulsa para ver el término en inglés'))),
         h('div.row', { style: { justifyContent: 'center', marginTop: '14px' } },
           h('button.btn', { onclick: () => { flipped = false; i++; draw(); } }, 'Repasar luego'),
           h('button.btn.success', { onclick: () => { known++; flipped = false; deck.splice(i % deck.length, 1); sfx.success(); draw(); } }, `Lo sé (${known})`),
