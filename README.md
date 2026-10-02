@@ -1,4 +1,4 @@
-# MAR-ESP SIM UC · v10 — Real Communication Lab
+# UCSea · v10 — Real Communication Lab
 
 Simulador inmersivo de comunicación marítima en inglés (IMO SMCP) para **Inglés Técnico Marítimo II** (Universidad de Cantabria).
 Proyecto de innovación docente. Funciona como web estática (GitHub Pages) con Firebase como backend en tiempo real.
@@ -44,6 +44,12 @@ Servidor local: `npx http-server . -p 8080` → http://localhost:8080/?mode=demo
 5. *(Opcional, Claude)*: `cd functions && npm install`, `firebase functions:secrets:set ANTHROPIC_API_KEY`, `firebase deploy --only functions`, y pegar la URL de `npcReply` en la pestaña IA. La clave vive en Secret Manager; la función solo responde a usuarios autenticados del proyecto.
 
 Si Firebase no responde, la app pasa automáticamente al modo demo y avisa.
+
+## Diseño
+
+- **Fondo cinematográfico**: carrusel de fotos marítimas (Pexels, licencia gratuita sin atribución obligatoria) con efecto Ken Burns, capa holográfica animada (mar en malla, partículas de luz), barrido de radar y paralaje con el ratón. Las fotos se piden comprimidas y después del primer pintado; si una falla, se salta. La animación se pausa con la pestaña oculta y respeta «reducir movimiento».
+- **Tipografía** alojada en el propio sitio (`styles/fonts/`, SIL OFL): Sora (titulares), Manrope (texto), IBM Plex Mono (instrumentos).
+- Logo UCSea: un ojo formado por el horizonte y una ola, con pupila de radar («UC Sea» = *you see*).
 
 ## Arquitectura
 

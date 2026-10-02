@@ -13,7 +13,7 @@ import { shipDiagram, parseLocation, describe } from '../ui/ship-diagram.js';
 import { speak, stopSpeaking, createPTT, sttSupported } from '../core/speech.js';
 import { sfx, startAlarm, stopAlarm } from '../core/audio.js';
 import { shuffle, fmtDuration, debounce, escapeHtml } from '../core/util.js';
-import { getOcean } from '../main.js';
+import { getBackdrop } from '../main.js';
 
 export default async function render(root, { path, user }) {
   if (path[1]) return player(root, missionById(path[1]), user);
@@ -23,7 +23,7 @@ export default async function render(root, { path, user }) {
     h('div.page-head', h('div', h('span.eyebrow', 'Inglés Técnico Marítimo II'), h('h2', 'Misiones de simulación'),
       h('p', 'Cada misión dura unos 15 minutos y combina escucha, radio, decisiones bajo presión, lectura de radar y escritura profesional. No son ejercicios de clase: son guardias.'))),
     h('div.grid.g2', MISSIONS.map((m) => h('div.panel.mission-card.card.hoverable', { onclick: () => go('missions/' + m.id) },
-      h('div.art', { style: { background: m.art } }),
+      h('div.art', { style: { background: m.photo ? `url("https://images.pexels.com/photos/${m.photo}/pexels-photo-${m.photo}.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=720") center/cover no-repeat, ${m.art}` : m.art } }),
       h('div.row.between', h('h3', { style: { margin: 0 } }, m.title), h('span.badge', `~${m.minutes} min`)),
       h('div', { style: { color: 'var(--accent-2)', fontWeight: 600 } }, m.es),
       h('div.small', m.role),
@@ -43,7 +43,7 @@ function player(root, mission, user) {
   let i = 0;
   let cleanupPhase = null;
   let runId = null;
-  const ocean = getOcean();
+  const ocean = getBackdrop();
   const dots = h('div.phase-dots');
   const clock = h('span.timer');
   const stage = h('div');
@@ -143,7 +143,7 @@ const RENDERERS = {
   brief(el, p, { next, mission }) {
     const heel = p.heel ? h('div.gauge.alarm', { style: { maxWidth: '260px' } }, h('small', 'HEEL INDICATOR'), h('b', `${p.heel}° STBD`)) : null;
     if (p.heel) startAlarm('heel', 'caution');
-    if (mission.scenarioId === 'santander_approach') getOcean()?.setMood({ fog: 1 });
+    if (mission.scenarioId === 'santander_approach') getBackdrop()?.setMood({ fog: 1 });
     mount(el, h('div.panel',
       header(p), h('p', { style: { fontSize: '1.15rem' } }, p.text), heel,
       h('h4', 'Objetivos'), h('ul', p.objectives.map((o) => h('li', o))),

@@ -2,7 +2,8 @@
 import { h, mount, icon, toast } from './core/dom.js';
 import { app, parseHash, go } from './core/store.js';
 import { initBackend, db } from './backend/index.js';
-import { startOcean } from './ui/ocean.js';
+import { startBackdrop } from './ui/backdrop.js';
+import { logo, wordmark } from './ui/brand.js';
 import { unlockAudio, setSoundEnabled, sfx, stopAllAlarms, stopAmbient } from './core/audio.js';
 import { stopSpeaking } from './core/speech.js';
 import { initials } from './core/util.js';
@@ -22,8 +23,11 @@ const ROUTES = {
 };
 
 let cleanup = null;
-let ocean = null;
-export const getOcean = () => ocean;
+let backdrop = null;
+export const getBackdrop = () => backdrop;
+
+// How much of the photo shows through: clear on the landing page, dimmed where people work.
+const VARIANT = { login: 'hero', '': 'hero', lab: 'focus', control: 'focus', bridge: 'focus', debrief: 'focus', missions: 'app', glossary: 'focus' };
 
 function prefs() {
   try { return JSON.parse(localStorage.getItem('mesim10:prefs') || '{}'); } catch { return {}; }
@@ -52,9 +56,7 @@ function topbar(route) {
   ];
   const soundOn = app.get().sound;
   return h('header.topbar',
-    h('div.brand', { onclick: () => go('') },
-      h('span.logo', { html: '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="29" fill="none" stroke="#39d0ff" stroke-width="3"/><circle cx="32" cy="32" r="17" fill="none" stroke="#39d0ff" stroke-opacity=".45" stroke-width="2"/><path d="M32 32 L54 20" stroke="#5ff0d0" stroke-width="3" stroke-linecap="round"/><circle cx="45" cy="25" r="3" fill="#ffcf5a"/></svg>' }),
-      h('span', 'MAR-ESP SIM', h('small', 'UC · MARITIME ENGLISH'))),
+    h('div.brand', { onclick: () => go(''), title: 'UCSea · Inicio' }, logo(38), wordmark()),
     h('nav.nav', { 'aria-label': 'Principal' }, items.map((it) =>
       h('a' + (route === it.id ? '.active' : ''), { href: '#/' + it.id }, icon(it.icon), it.label))),
     h('div.userbox',
@@ -77,7 +79,9 @@ async function render() {
   cleanup = null;
   stopAllAlarms();
   stopSpeaking();
-  ocean?.setMood({ alarm: 0, fog: 0, sea: 3 });
+  backdrop?.setMood({ alarm: 0, fog: 0 });
+  backdrop?.setVariant(VARIANT[route] || 'app');
+  document.body.dataset.route = route || 'home';
 
   if (!user && route !== 'login') { go('login'); return; }
   if (user && route === 'login') { go(''); return; }
@@ -99,7 +103,7 @@ async function render() {
 async function boot() {
   applyPrefs();
   unlockAudio();
-  ocean = startOcean(document.getElementById('ocean'));
+  backdrop = startBackdrop(document.getElementById('backdrop'));
   const api = await initBackend();
   if (api.fallbackReason) setTimeout(() => toast(api.fallbackReason, 'warn', 7000), 800);
   let first = true;

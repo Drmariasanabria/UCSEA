@@ -4,6 +4,9 @@ import { db, setPreferredMode } from '../backend/index.js';
 import { sfx } from '../core/audio.js';
 import { EVENTS } from '../data/events.js';
 import { ROLES, CAREERS } from '../data/careers.js';
+import { getBackdrop } from '../main.js';
+import { SLIDES } from '../ui/backdrop.js';
+import { logo, wordmark } from '../ui/brand.js';
 
 // Turn on once the Microsoft provider is configured in Firebase Authentication (needs an Azure app registration).
 const MICROSOFT_ENABLED = false;
@@ -30,7 +33,7 @@ export default function render(root) {
   };
   type();
 
-  const card = h('div.panel.auth-card');
+  const card = h('div.login-card');
   function drawCard() {
     const segs = api.mode === 'firebase'
       ? [['in', 'Entrar'], ['up', 'Crear cuenta'], ['demo', 'Probar demo']]
@@ -92,7 +95,7 @@ export default function render(root) {
         h('button.btn.primary.big', { style: { width: '100%' }, onclick: go }, icon('play'), 'Entrar en modo demo'),
         api.mode === 'demo' ? h('button.btn.ghost.small', { style: { marginTop: '12px' }, onclick: () => setPreferredMode('firebase') }, 'Usar cuentas reales (Firebase)') : null);
     }
-    mount(card, h('h3', 'Acceso a bordo'), seg, body);
+    mount(card, h('h3', tab === 'up' ? 'Crea tu cuenta' : 'Sube a bordo'), seg, body);
   }
   drawCard();
 
@@ -103,23 +106,40 @@ export default function render(root) {
     api.signInDemo(JSON.parse(pending));
   }
 
-  mount(root, h('section.hero',
-    h('div',
-      h('span.eyebrow', 'Universidad de Cantabria · Inglés Técnico Marítimo II'),
-      h('h1', 'Real ', h('span.glow', 'Communication'), h('br'), 'Lab'),
-      h('p.lead', 'Un puente de mando compartido en tiempo real: radar, VHF, alarmas y emergencias que el docente controla en directo. Cada rol —náutico, marino, marítimo o de gestión— recibe sus propias tareas y debe resolverlas comunicándose en inglés SMCP.'),
-      tw,
-      h('div.hero-stats',
+  // Caption + progress for the photo currently on screen.
+  const bd = getBackdrop();
+  const cap = h('div.cap', 'Maritime English Simulator');
+  const place = h('div.place', 'UNIVERSIDAD DE CANTABRIA');
+  const dots = h('div.slide-dots', SLIDES.map((_, i) => h('button', { 'aria-label': `Imagen ${i + 1}`, onclick: () => bd?.go(i) })));
+  const off = bd?.onChange((s, i) => {
+    cap.textContent = s.es;
+    place.textContent = s.place.toUpperCase();
+    [...dots.children].forEach((b, j) => b.classList.toggle('on', j === i));
+  });
+
+  mount(root, h('section.landing',
+    h('header.landing-top',
+      h('div.brand', logo(42), wordmark()),
+      h('span.uc', 'Universidad de Cantabria · Inglés Técnico Marítimo II')),
+    h('div.landing-hero',
+      h('span.eyebrow', 'Maritime English Simulator'),
+      h('h1.mega', h('b', 'UC'), h('span', 'Sea')),
+      h('p.tagline', 'Comunica. Coordina. ', h('span.grad', 'Navega en inglés.')),
+      h('p.lead', 'Un puente de mando compartido en tiempo real: radar, VHF, alarmas y emergencias que el docente controla en directo. Cada puesto —puente, máquinas, VTS, MRCC, puerto— recibe sus propias tareas y las resuelve en inglés SMCP.'),
+      h('div.radio-line', h('span.live-pill', 'LIVE · CH 16'), tw),
+      h('div.stats',
         h('div', h('b', String(EVENTS.length)), h('span', 'eventos y alarmas')),
         h('div', h('b', String(ROLES.length)), h('span', 'puestos profesionales')),
         h('div', h('b', String(CAREERS.length)), h('span', 'titulaciones')),
-        h('div', h('b', '24'), h('span', 'estructuras evaluables'))),
-      h('div.row',
-        h('span.chip', icon('radar'), 'Radar ARPA'), h('span.chip', icon('mic'), 'Voz y PTT'), h('span.chip', icon('alarm'), 'Alarmas'),
-        h('span.chip', icon('sparkle'), 'Estaciones IA'), h('span.chip', icon('graph'), 'Glosario en grafo'), h('span.chip', icon('log'), 'Caja negra / debriefing'))),
-    card));
+        h('div', h('b', '24'), h('span', 'estructuras evaluables')))),
+    card,
+    h('footer.landing-foot',
+      h('div.now-showing', h('span.eyebrow', 'En pantalla'), cap, place, dots),
+      h('div.feature-row',
+        h('span', icon('radar'), 'Radar ARPA'), h('span', icon('mic'), 'Voz y PTT'), h('span', icon('alarm'), 'Alarmas en directo'),
+        h('span', icon('sparkle'), 'Estaciones IA'), h('span', icon('graph'), 'Glosario en grafo'), h('span', icon('log'), 'Caja negra')))));
 
-  return () => clearTimeout(timer);
+  return () => { clearTimeout(timer); off?.(); };
 }
 
 function authError(e) {

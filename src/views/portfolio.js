@@ -115,7 +115,7 @@ export default async function render(root, { path, user }) {
   }
 
   function portfolioMarkdown() {
-    const md = [`# Portfolio — ${profile?.name || ''}`, '', `${careerById(profile?.careerId)?.es || ''}`, `Exported ${fmtDate(Date.now())} · MAR-ESP SIM UC`, ''];
+    const md = [`# Portfolio — ${profile?.name || ''}`, '', `${careerById(profile?.careerId)?.es || ''}`, `Exported ${fmtDate(Date.now())} · UCSea`, ''];
     for (const e of [...entries].reverse()) {
       md.push(`## ${e.title}`, `_${TYPE[e.type]?.es || e.type} · ${fmtDate(e.createdAt)}_`, '');
       if (e.stats) md.push(`Messages ${e.stats.messages} · spoken ${e.stats.spoken} · SMCP accuracy ${e.stats.smcpAccuracy ?? '—'}% · variety ${e.stats.variety}`, '');

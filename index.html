@@ -3,19 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MAR-ESP SIM UC · Maritime Communication Lab</title>
+  <title>UCSea · Maritime English Simulator</title>
   <meta name="description" content="Simulador inmersivo de comunicación marítima en inglés (SMCP) para Ingeniería Náutica, Marina, Marítima y Gestión Marítima — Universidad de Cantabria.">
-  <meta name="theme-color" content="#030b16">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='29' fill='%23030b16' stroke='%2339d0ff' stroke-width='3'/%3E%3Cpath d='M32 32 L52 18' stroke='%235ff0d0' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='16' fill='none' stroke='%2339d0ff' stroke-opacity='.5' stroke-width='2'/%3E%3C/svg%3E">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@600;700;800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  <meta name="theme-color" content="#020812">
+  <link rel="preconnect" href="https://images.pexels.com">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23020812'/%3E%3Cpath d='M6 33 C17 15 47 15 58 33' fill='none' stroke='%233fc4ff' stroke-width='4' stroke-linecap='round'/%3E%3Cpath d='M6 33 C15 44 23 46 32 43 C41 40 49 45 58 33' fill='none' stroke='%235ef2d6' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='31' r='8' fill='none' stroke='%237be7ff' stroke-width='3'/%3E%3Ccircle cx='32' cy='31' r='2.6' fill='%23ffd36b'/%3E%3C/svg%3E">
+  <link rel="preload" href="styles/fonts/sora-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="styles/fonts/manrope-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles/app.css">
 </head>
 <body>
-  <canvas id="ocean" aria-hidden="true"></canvas>
-  <div class="scanlines" aria-hidden="true"></div>
-  <div class="boot" id="boot"><div class="col" style="align-items:center;gap:18px"><div class="sonar"></div><div class="mono" style="letter-spacing:.3em;color:var(--accent)">INITIALISING BRIDGE SYSTEMS</div></div></div>
+  <div id="backdrop" data-variant="hero" aria-hidden="true"></div>
+  <div class="boot" id="boot"><div class="boot-mark"><div class="sonar"></div><div class="wordmark"><b>UC</b><span>Sea</span></div></div></div>
   <div id="app"></div>
   <noscript>Este simulador necesita JavaScript.</noscript>
   <script type="module" src="src/main.js"></script>

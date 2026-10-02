@@ -75,5 +75,5 @@ export default async function render(root, { user }) {
             h('li', 'Firestore → Reglas: publicar el contenido de firestore.rules del repositorio.'),
             h('li', 'IA sin claves en el navegador: AI Logic (Gemini Developer API, gratuito) protegido con App Check + reCAPTCHA. Ya está configurado en maritime-comms.'),
             h('li', 'Opcional (Claude): desplegar functions/ con el secreto ANTHROPIC_API_KEY y pegar la URL en la pestaña IA de la consola.'))) : null)),
-    h('p.small.center', { style: { marginTop: '24px' } }, `MAR-ESP SIM UC v10 · ${careerById(user.careerId)?.es || ''} · Universidad de Cantabria · Proyecto de innovación docente`)));
+    h('p.small.center', { style: { marginTop: '24px' } }, `UCSea v10 · ${careerById(user.careerId)?.es || ''} · Universidad de Cantabria · Proyecto de innovación docente`)));
 }

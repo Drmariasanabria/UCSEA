@@ -15,6 +15,7 @@ export const MISSIONS = [
   // ───────────────────────────────────────── M1
   {
     id: 'fog-pilot',
+    photo: 16602466, // Pexels (free licence)
     title: 'Fog at the Pilot Station',
     es: 'Niebla en la estación de prácticos',
     minutes: 15,
@@ -107,6 +108,7 @@ export const MISSIONS = [
   // ───────────────────────────────────────── M2
   {
     id: 'bunker-watch',
+    photo: 4940270, // Pexels (free licence)
     title: 'Bunker Watch',
     es: 'Guardia de bunkering',
     minutes: 15,
@@ -195,6 +197,7 @@ export const MISSIONS = [
   // ───────────────────────────────────────── M3
   {
     id: 'dark-tow',
+    photo: 15556014, // Pexels (free licence)
     title: 'Dark Tow in the Lane',
     es: 'Remolque a oscuras en el carril',
     minutes: 17,
@@ -286,6 +289,7 @@ export const MISSIONS = [
   // ───────────────────────────────────────── M4
   {
     id: 'list-starboard',
+    photo: 20216774, // Pexels (free licence)
     title: 'List to Starboard',
     es: 'Escora a estribor',
     minutes: 15,
@@ -363,6 +367,7 @@ export const MISSIONS = [
   // ───────────────────────────────────────── M5
   {
     id: 'call-the-place',
+    photo: 799091, // Pexels (free licence)
     title: 'Call the Place',
     es: 'Dirige al equipo de averías',
     minutes: 14,

@@ -15,7 +15,7 @@ import { SEVERITY } from '../data/events.js';
 import { startAlarm, stopAlarm, stopAllAlarms, sfx, startAmbient, stopAmbient, setAmbientWeather } from '../core/audio.js';
 import { speak, stopSpeaking } from '../core/speech.js';
 import { shipDiagram } from '../ui/ship-diagram.js';
-import { getOcean } from '../main.js';
+import { getBackdrop } from '../main.js';
 import { participantStats } from '../ai/analyzer.js';
 import { buildSessionReport } from '../export/report.js';
 import { safetyIndex, safetyColor } from '../lab/metrics.js';
@@ -96,7 +96,7 @@ function consoleView(root, session, user) {
   let selectedTarget = null;
   let voices = localStorage.getItem('mesim10:voices') !== 'off';
   let lastActivity = Date.now();
-  const ocean = getOcean();
+  const ocean = getBackdrop();
 
   const status = h('div');
   const leftCol = h('div.col-a');

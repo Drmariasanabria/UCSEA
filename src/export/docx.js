@@ -22,7 +22,7 @@ function table(rows) {
 /**
  * blocks: [{ h1|h2|h3: text } | { p: text } | { ul: [text] } | { table: [[...]] } | { pageBreak: true }]
  */
-export function buildDocx(blocks, { title = 'Report', author = 'MAR-ESP SIM UC' } = {}) {
+export function buildDocx(blocks, { title = 'Report', author = 'UCSea' } = {}) {
   const body = blocks.map((b) => {
     if (b.h1) return para(b.h1, 'Heading1');
     if (b.h2) return para(b.h2, 'Heading2');
