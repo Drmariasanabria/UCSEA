@@ -162,13 +162,15 @@ function consoleView(root, session, user) {
           h('div.row', { style: { gap: '6px' } },
             h('button.icon-btn', { title: 'Reducir escala', onclick: () => { radar.stepRange(-1); updR(); } }, '−'), rangeLbl,
             h('button.icon-btn', { title: 'Aumentar escala', onclick: () => { radar.stepRange(1); updR(); } }, '+'))),
-        h('div.radar-wrap', canvas),
-        h('div.radar-tools',
-          shore ? null : h('button.btn.small', { onclick: (e) => { radar.setOrientation(radar.orientation === 'head' ? 'north' : 'head'); e.target.textContent = radar.orientation === 'head' ? 'HEAD UP' : 'NORTH UP'; } }, 'HEAD UP'),
-          h('button.btn.small', { onclick: () => radar.setTool('ebl') }, 'EBL'), h('button.btn.small', { onclick: () => radar.setTool('vrm') }, 'VRM'),
-          h('button.btn.small', { onclick: () => radar.acquireAll() }, 'ACQ ALL'), h('button.btn.small.ghost', { onclick: () => radar.clearTools() }, 'CLR'),
-          h('button.btn.small.ghost', { onclick: () => insertTargetReport() }, icon('radio'), 'Informe de blanco')),
-        tgtBox);
+        h('div.scope-layout',
+          h('div.radar-wrap', canvas),
+          h('div.scope-rail',
+            h('div.radar-tools',
+              shore ? null : h('button.btn.small', { onclick: (e) => { radar.setOrientation(radar.orientation === 'head' ? 'north' : 'head'); e.target.textContent = radar.orientation === 'head' ? 'HEAD UP' : 'NORTH UP'; } }, 'HEAD UP'),
+              h('button.btn.small', { onclick: () => radar.setTool('ebl') }, 'EBL'), h('button.btn.small', { onclick: () => radar.setTool('vrm') }, 'VRM'),
+              h('button.btn.small', { onclick: () => radar.acquireAll() }, 'ACQ ALL'), h('button.btn.small.ghost', { onclick: () => radar.clearTools() }, 'CLR')),
+            tgtBox,
+            h('button.btn.small.primary', { onclick: () => insertTargetReport() }, icon('radio'), 'Informe de blanco'))));
       drawTarget();
     } else if (stt.id === 'ecr') {
       mount(stationBox, h('div.panel-head', h('h4', icon('engine'), 'Engine control room · alarm & monitoring')), h('div#ecr'));
@@ -185,7 +187,7 @@ function consoleView(root, session, user) {
   function drawTarget() {
     if (!radar) return;
     const c = picture(st.lab).contacts.find((x) => x.id === selectedTarget);
-    mount(tgtBox, h('div', { style: { marginTop: '10px' } }, targetCard(c)));
+    mount(tgtBox, targetCard(c));
   }
 
   function insertTargetReport() {

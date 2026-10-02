@@ -107,7 +107,7 @@ function player(root, mission, user) {
 }
 
 // ------------------------------------------------------------------ helpers
-const header = (p, extra) => h('div.panel-head', h('h3', { style: { margin: 0 } }, p.title), extra || null);
+const header = (p, extra) => h('div.panel-head.phase-head', h('h3', { style: { margin: 0 } }, p.title), extra || null);
 
 function checklist(results) {
   return h('ul.checklist', results.map((r) => h('li' + (r.ok ? '.ok' : ''), r.label)));
@@ -144,10 +144,12 @@ const RENDERERS = {
     const heel = p.heel ? h('div.gauge.alarm', { style: { maxWidth: '260px' } }, h('small', 'HEEL INDICATOR'), h('b', `${p.heel}° STBD`)) : null;
     if (p.heel) startAlarm('heel', 'caution');
     if (mission.scenarioId === 'santander_approach') getBackdrop()?.setMood({ fog: 1 });
-    mount(el, h('div.panel',
-      header(p), h('p', { style: { fontSize: '1.15rem' } }, p.text), heel,
-      h('h4', 'Objetivos'), h('ul', p.objectives.map((o) => h('li', o))),
-      h('button.btn.primary.big', { onclick: () => { sfx.boot(); next(null); } }, icon('play'), 'Tomar la guardia')));
+    const photo = mission.photo ? `url("https://images.pexels.com/photos/${mission.photo}/pexels-photo-${mission.photo}.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1600")` : 'none';
+    mount(el, h('section.mission-brief', { style: { backgroundImage: `${photo}, ${mission.art}` } },
+      h('span.eyebrow', 'Briefing'),
+      h('h3', p.title), h('p', p.text), heel,
+      h('div.objectives', p.objectives.map((o) => h('span.objective', icon('target'), o))),
+      h('div', h('button.btn.primary.big', { onclick: () => { sfx.boot(); next(null); } }, icon('play'), 'Tomar la guardia'))));
     speak(p.text, { persona: 'narrator', radio: false });
     return () => stopAlarm('heel');
   },
